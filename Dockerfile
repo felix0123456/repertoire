@@ -1,10 +1,10 @@
 FROM node:22-bookworm-slim AS base
+RUN apt-get update -y && apt-get install -y --no-install-recommends openssl ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 # 1. Dependencies Stage
 FROM base AS deps
 WORKDIR /app
-RUN apt-get update -y && apt-get install -y --no-install-recommends openssl ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json* ./
 RUN npm install --no-audit --no-fund --legacy-peer-deps && npm cache clean --force
 
@@ -24,9 +24,6 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV HOME=/app
-
-RUN apt-get update -y && apt-get install -y --no-install-recommends openssl ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
 
 RUN npm install -g prisma@5.22.0 && npm cache clean --force
 

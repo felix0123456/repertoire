@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import fs from "fs";
 import path from "path";
+import { DEFAULT_SETLIST_PIECES, DEFAULT_CONCERT } from "./defaultSetlist";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -88,12 +89,58 @@ export async function ensurePersistentDataLoaded(): Promise<void> {
     ]);
 
     if (pieceCount > 0 || concertCount > 0 || userCount > 0) {
+      // Ensure any legacy setlist number prefixes ("01. ") are stripped from piece titles
+      const allPieces = await prisma.piece.findMany({
+        select: { id: true, title: true },
+      });
+      let updatedAny = false;
+      for (const p of allPieces) {
+        const cleaned = p.title.replace(/^\d{1,2}\.\s+/, "");
+        if (cleaned !== p.title) {
+          await prisma.piece.update({
+            where: { id: p.id },
+            data: { title: cleaned },
+          });
+          updatedAny = true;
+        }
+      }
+      if (updatedAny) {
+        await savePersistentSnapshot();
+      }
       return;
     }
 
     const dataDir = getPersistentDataDir();
     const snapshotPath = path.join(dataDir, "backup-latest.json");
-    if (!fs.existsSync(snapshotPath)) return;
+    if (!fs.existsSync(snapshotPath)) {
+      // Seed default 44-piece setlist ("BigBand MV Neumarkt – Programm Dance & Talk 2026")
+      await prisma.$transaction(async (tx) => {
+        for (const item of DEFAULT_SETLIST_PIECES) {
+          await tx.piece.create({
+            data: {
+              title: item.title,
+              folderNumber: "",
+              artist: "BigBand MV Neumarkt",
+              singers: item.singers,
+              soloists: "",
+              songType: item.songType,
+              difficulty: "MEDIUM",
+              notes: item.notes,
+              createdBy: "Setlist Dance & Talk 2026",
+            },
+          });
+        }
+        await tx.concertEvent.create({
+          data: {
+            title: DEFAULT_CONCERT.title,
+            location: DEFAULT_CONCERT.location,
+            additionalInfo: DEFAULT_CONCERT.additionalInfo,
+          },
+        });
+      });
+      await savePersistentSnapshot();
+      return;
+    }
 
     const raw = fs.readFileSync(snapshotPath, "utf-8");
     const data = JSON.parse(raw);
@@ -121,12 +168,13 @@ export async function ensurePersistentDataLoaded(): Promise<void> {
 
       if (Array.isArray(data.pieces)) {
         for (const p of data.pieces) {
+          const cleanTitle = String(p.title || "").replace(/^\d{1,2}\.\s+/, "");
           await tx.piece.upsert({
             where: { id: p.id },
             update: {},
             create: {
               id: p.id,
-              title: p.title,
+              title: cleanTitle,
               folderNumber: p.folderNumber || "",
               artist: p.artist || "",
               singers: p.singers || "",

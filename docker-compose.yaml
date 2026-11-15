@@ -1,0 +1,21 @@
+version: '3.8'
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - DATABASE_URL=${DATABASE_URL:-file:/app/data/dev.db}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-https://bb.felixresch.com}
+    volumes:
+      - 'repertoire-data:/app/data'
+      - 'repertoire-uploads:/app/public/uploads'
+    expose:
+      - '3000'
+volumes:
+  repertoire-data: null
+  repertoire-uploads: null

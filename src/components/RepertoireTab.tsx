@@ -20,6 +20,7 @@ interface RepertoireTabProps {
   currentUser: { id: string; name: string } | null;
   onRefresh: () => Promise<void>;
   onRequireLogin: () => void;
+  onOpenOnboarding?: () => void;
 }
 
 const DIFFICULTY_LABELS: Record<string, string> = {
@@ -40,6 +41,7 @@ export default function RepertoireTab({
   currentUser,
   onRefresh,
   onRequireLogin,
+  onOpenOnboarding,
 }: RepertoireTabProps) {
   const [search, setSearch] = useState("");
   const [filterSinger, setFilterSinger] = useState("");
@@ -328,14 +330,31 @@ export default function RepertoireTab({
             </span>
           </div>
 
-          <button
-            type="button"
-            onClick={openCreateModal}
-            className="type-kicker ui-transition flex w-full items-center justify-center gap-2 bg-[var(--accent)] px-4 py-3 text-[var(--accent-ink)] cursor-pointer"
-          >
-            <Plus className="h-4 w-4" />
-            NEUES STÜCK ANLEGEN
-          </button>
+          <div className="space-y-2">
+            <button
+              type="button"
+              onClick={openCreateModal}
+              className="type-kicker ui-transition flex w-full items-center justify-center gap-2 bg-[var(--accent)] px-4 py-3 text-[var(--accent-ink)] cursor-pointer"
+            >
+              <Plus className="h-4 w-4" />
+              NEUES STÜCK ANLEGEN
+            </button>
+
+            {onOpenOnboarding && pieces.length > 0 && (
+              <button
+                type="button"
+                onClick={onOpenOnboarding}
+                className="type-kicker ui-transition flex w-full items-center justify-between border border-[var(--ink-primary)] bg-[var(--bg-recessed)] px-3.5 py-2.5 text-[var(--ink-primary)] hover:bg-[var(--ink-primary)] hover:text-[var(--bg-surface)] cursor-pointer"
+              >
+                <span>BEWERTUNGS-ONBOARDING</span>
+                <span className="font-mono-tabular">
+                  {currentUser
+                    ? `${pieces.filter((p) => !p.myVote).length} OFFEN`
+                    : `${pieces.length} STÜCKE`}
+                </span>
+              </button>
+            )}
+          </div>
 
           {/* Search */}
           <div>

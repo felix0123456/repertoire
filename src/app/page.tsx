@@ -13,6 +13,7 @@ import RepertoireTab from "@/components/RepertoireTab";
 import ProbeplanTab from "@/components/ProbeplanTab";
 import TerminkalenderTab from "@/components/TerminkalenderTab";
 import HistorieTab from "@/components/HistorieTab";
+import OnboardingModal from "@/components/OnboardingModal";
 
 const STORAGE_USER_KEY = "repertoire_current_user_v1";
 
@@ -27,6 +28,8 @@ export default function HomePage() {
   } | null>(null);
   const [nameInput, setNameInput] = useState("");
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
+  const [pendingOnboarding, setPendingOnboarding] = useState(false);
   const [loggingIn, setLoggingIn] = useState(false);
 
   const [pieces, setPieces] = useState<PieceItem[]>([]);
@@ -47,7 +50,7 @@ export default function HomePage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const fetchAllData = useCallback(
-    async (overrideUserId?: string) => {
+    async (overrideUserId?: string): Promise<PieceItem[]> => {
       try {
         const uid = overrideUserId ?? currentUser?.id ?? "";
         const [piecesRes, rehearsalsRes] = await Promise.all([
@@ -55,9 +58,11 @@ export default function HomePage() {
           fetch("/api/rehearsals"),
         ]);
 
+        let fetchedPieces: PieceItem[] = [];
         if (piecesRes.ok) {
           const pData = await piecesRes.json();
-          setPieces(pData.pieces || []);
+          fetchedPieces = pData.pieces || [];
+          setPieces(fetchedPieces);
           setSuggestions(
             pData.suggestions || { singers: [], soloists: [], songTypes: [] }
           );
@@ -69,8 +74,10 @@ export default function HomePage() {
           setSessions(rData.sessions || []);
           setConcerts(rData.concerts || []);
         }
+        return fetchedPieces;
       } catch (err) {
         console.error("Failed to fetch app data:", err);
+        return [];
       } finally {
         setLoading(false);
       }
@@ -112,7 +119,17 @@ export default function HomePage() {
         localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(data.user));
         setNameInput("");
         setShowLoginModal(false);
-        await fetchAllData(data.user.id);
+        const loadedPieces = await fetchAllData(data.user.id);
+        const unratedCount = loadedPieces.filter((p) => !p.myVote).length;
+        // Automatically launch initial rating onboarding for any user with unrated pieces
+        // or if onboarding was explicitly clicked before login
+        if (
+          loadedPieces.length > 0 &&
+          (unratedCount > 0 || pendingOnboarding)
+        ) {
+          setShowOnboardingModal(true);
+        }
+        setPendingOnboarding(false);
       }
     } finally {
       setLoggingIn(false);
@@ -263,7 +280,7 @@ export default function HomePage() {
 
               <div className="mt-2">
                 {currentUser ? (
-                  <div className="flex items-center justify-between border border-[var(--ink-primary)] bg-[var(--bg-surface)] px-3 py-1.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border border-[var(--ink-primary)] bg-[var(--bg-surface)] px-3 py-1.5">
                     <div>
                       <span className="type-kicker mr-2 text-[var(--ink-muted)]">
                         AKTIVER SPIELER:
@@ -272,14 +289,26 @@ export default function HomePage() {
                         {currentUser.name}
                       </span>
                     </div>
-                    <button
-                      type="button"
-                      onClick={handleLogout}
-                      title="Namen wechseln / Abmelden"
-                      className="type-kicker inline-flex items-center gap-1 text-[var(--ink-secondary)] hover:text-[var(--accent)] cursor-pointer"
-                    >
-                      WECHSELN <LogOut className="h-3 w-3" />
-                    </button>
+                    <div className="flex items-center gap-3">
+                      {pieces.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setShowOnboardingModal(true)}
+                          className="type-kicker border border-[var(--ink-primary)] bg-[var(--bg-recessed)] px-2.5 py-1 text-[var(--ink-primary)] hover:bg-[var(--ink-primary)] hover:text-[var(--bg-surface)] cursor-pointer"
+                        >
+                          STÜCKE BEWERTEN (
+                          {pieces.filter((p) => !p.myVote).length} OFFEN)
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={handleLogout}
+                        title="Namen wechseln / Abmelden"
+                        className="type-kicker inline-flex items-center gap-1 text-[var(--ink-secondary)] hover:text-[var(--accent)] cursor-pointer"
+                      >
+                        WECHSELN <LogOut className="h-3 w-3" />
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <form
@@ -404,8 +433,18 @@ export default function HomePage() {
                 pieces={pieces}
                 suggestions={suggestions}
                 currentUser={currentUser}
-                onRefresh={() => fetchAllData()}
+                onRefresh={async () => {
+                  await fetchAllData();
+                }}
                 onRequireLogin={() => setShowLoginModal(true)}
+                onOpenOnboarding={() => {
+                  if (currentUser) {
+                    setShowOnboardingModal(true);
+                  } else {
+                    setPendingOnboarding(true);
+                    setShowLoginModal(true);
+                  }
+                }}
               />
             )}
 
@@ -416,7 +455,9 @@ export default function HomePage() {
                 pieces={pieces}
                 suggestions={suggestions}
                 currentUser={currentUser}
-                onRefresh={() => fetchAllData()}
+                onRefresh={async () => {
+                  await fetchAllData();
+                }}
                 onRequireLogin={() => setShowLoginModal(true)}
               />
             )}
@@ -426,7 +467,9 @@ export default function HomePage() {
                 sessions={sessions}
                 concerts={concerts}
                 suggestions={suggestions}
-                onRefresh={() => fetchAllData()}
+                onRefresh={async () => {
+                  await fetchAllData();
+                }}
                 onOpenProbeplan={() => setActiveTab("probeplan")}
               />
             )}
@@ -434,12 +477,28 @@ export default function HomePage() {
             {activeTab === "historie" && (
               <HistorieTab
                 sessions={sessions}
-                onRefresh={() => fetchAllData()}
+                onRefresh={async () => {
+                  await fetchAllData();
+                }}
               />
             )}
           </>
         )}
       </main>
+
+      {/* Initial Rating Onboarding Modal */}
+      {currentUser && (
+        <OnboardingModal
+          isOpen={showOnboardingModal}
+          onClose={() => setShowOnboardingModal(false)}
+          pieces={pieces}
+          suggestions={suggestions}
+          currentUser={currentUser}
+          onRefresh={async () => {
+            await fetchAllData();
+          }}
+        />
+      )}
 
       {/* Prompt Login Modal */}
       {showLoginModal && (
