@@ -23,26 +23,21 @@ FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV HOME=/app
 
 RUN apt-get update -y && apt-get install -y --no-install-recommends openssl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
-
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/prisma ./prisma
 
 # Ensure directories for SQLite persistent volume and uploads exist with permissions
 RUN mkdir -p .next /app/data /app/public/uploads
-RUN chown -R nextjs:nodejs .next /app/data /app/public
 
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 
-RUN npm install prisma@5.22.0 --legacy-peer-deps
-
-USER nextjs
+RUN npm install prisma@5.22.0 --no-save --legacy-peer-deps && npm cache clean --force
 
 EXPOSE 3000
 ENV PORT=3000
@@ -50,5 +45,4 @@ ENV HOSTNAME="0.0.0.0"
 ENV DATABASE_URL="file:/app/data/dev.db"
 
 # Push DB schema directly to mounted persistent volume on startup without data loss, then start server
-CMD ["/bin/sh", "-c", "npx --yes prisma@5.22.0 db push --skip-generate && node server.js"]
-
+CMD ["/bin/sh", "-c", "./node_modules/.bin/prisma db push --skip-generate && node server.js"]
