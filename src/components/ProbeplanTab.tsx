@@ -2,7 +2,6 @@
 
 import React, { useState } from "react";
 import {
-  Calendar,
   Play,
   CheckCircle2,
   Plus,
@@ -12,15 +11,10 @@ import {
   Sparkles,
   Lock,
   Unlock,
-  Mic,
-  Guitar,
   FastForward,
   AlertTriangle,
   Edit3,
   Check,
-  MapPin,
-  FileText,
-  Sliders,
 } from "lucide-react";
 import {
   PieceItem,
@@ -307,65 +301,90 @@ export default function ProbeplanTab({
   };
 
   return (
-    <div className="space-y-6">
-      {/* Configuration & Mode Bar */}
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/75 p-5 shadow-lg">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h2 className="flex items-center gap-2 text-lg font-bold text-slate-100">
-              <Sliders className="h-5 w-5 text-amber-400" />
+    /* Asymmetric 12-Column Grid: Columns 1–4 Sticky Plan Controller, Columns 5–12 Session Sheets */
+    <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
+      {/* Left Rail: Columns 1–4 */}
+      <aside className="lg:col-span-4">
+        <div className="sticky top-36 space-y-5 border-t-2 border-[var(--rule-heavy)] bg-[var(--bg-surface)] p-5 border-x border-b border-x-[var(--rule-border)] border-b-[var(--rule-border)]">
+          <div className="border-b border-[var(--rule-border)] pb-3">
+            <div className="type-kicker text-[var(--ink-muted)]">
+              DISPOSITION & MODUS
+            </div>
+            <h2 className="type-section-h2 mt-0.5 text-[var(--ink-primary)]">
               Probenplan-Steuerung
             </h2>
-            <p className="text-xs text-slate-400">
-              Wähle zwischen einfacher Probenanzahl, konkreten Probeterminen
-              (mit Sänger-Anwesenheit & Solisten-Abwesenheit) oder komplett
-              manueller Planung.
-            </p>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            {(
-              [
-                {
-                  id: "SIMPLE_COUNT",
-                  label: "Einfache Probenanzahl",
-                },
-                {
-                  id: "EXACT_DATES",
-                  label: "Konkrete Probetermine",
-                },
-                {
-                  id: "MANUAL",
-                  label: "Komplett Manuell",
-                },
-              ] as const
-            ).map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => {
-                  setPlanningMode(m.id);
-                  handleSaveConfig(m.id, sessionsCount, piecesPerSession);
-                }}
-                className={`rounded-xl px-3.5 py-2 text-xs font-semibold transition cursor-pointer ${
-                  planningMode === m.id
-                    ? "bg-amber-500 text-slate-950 shadow-md"
-                    : "border border-slate-700 bg-slate-950 text-slate-300 hover:border-slate-600"
-                }`}
-              >
-                {m.label}
-              </button>
-            ))}
-          </div>
-        </div>
+          <button
+            type="button"
+            onClick={() => {
+              setNewTitle(`Probe ${sessions.length + 1}`);
+              setShowNewSessionModal(true);
+            }}
+            className="type-kicker ui-transition flex w-full items-center justify-center gap-2 bg-[var(--accent)] px-4 py-3 text-[var(--accent-ink)] cursor-pointer"
+          >
+            <Plus className="h-4 w-4" />
+            NEUEN PROBETERMIN ANLEGEN
+          </button>
 
-        {/* Settings Row */}
-        <div className="mt-4 flex flex-wrap items-end justify-between gap-4 border-t border-slate-800/80 pt-4">
-          <div className="flex flex-wrap items-end gap-4">
+          {/* Mode Selector */}
+          <div className="space-y-1.5">
+            <span className="type-kicker block text-[var(--ink-secondary)]">
+              Planungsmodus
+            </span>
+            <div className="flex flex-col border border-[var(--rule-border)] bg-[var(--bg-paper)]">
+              {(
+                [
+                  {
+                    id: "SIMPLE_COUNT",
+                    label: "01 / Einfache Probenanzahl",
+                    desc: "Automatische Verteilung auf N Proben",
+                  },
+                  {
+                    id: "EXACT_DATES",
+                    label: "02 / Konkrete Probetermine",
+                    desc: "Termine mit Sänger- & Solisten-Filter",
+                  },
+                  {
+                    id: "MANUAL",
+                    label: "03 / Komplett Manuell",
+                    desc: "Volle eigene Zusammenstellung",
+                  },
+                ] as const
+              ).map((m) => {
+                const active = planningMode === m.id;
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => {
+                      setPlanningMode(m.id);
+                      handleSaveConfig(m.id, sessionsCount, piecesPerSession);
+                    }}
+                    className={`ui-transition border-b border-[var(--rule-border)] last:border-b-0 p-3 text-left cursor-pointer ${
+                      active
+                        ? "bg-[var(--bg-recessed)] border-l-4 border-l-[var(--accent)]"
+                        : "bg-[var(--bg-surface)] hover:bg-[var(--bg-paper)]"
+                    }`}
+                  >
+                    <div className="type-kicker text-[var(--ink-primary)]">
+                      {m.label}
+                    </div>
+                    <div className="mt-0.5 text-xs text-[var(--ink-secondary)]">
+                      {m.desc}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Numeric Parameters */}
+          <div className="space-y-3 border-t border-[var(--rule-border)] pt-4">
             {planningMode === "SIMPLE_COUNT" && (
               <div>
-                <label className="mb-1 block text-xs font-semibold text-slate-300">
-                  Verbleibende Proben bis zum Auftritt
+                <label className="type-kicker mb-1 block text-[var(--ink-secondary)]">
+                  Verbleibende Proben bis Konzert
                 </label>
                 <div className="flex items-center gap-2">
                   <input
@@ -376,16 +395,18 @@ export default function ProbeplanTab({
                     onChange={(e) =>
                       setSessionsCount(Math.max(1, Number(e.target.value) || 1))
                     }
-                    className="w-24 rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm font-bold text-amber-400 focus:border-amber-500 focus:outline-none"
+                    className="font-mono-tabular w-24 border border-[var(--ink-primary)] bg-[var(--bg-paper)] px-3 py-1.5 text-sm font-bold text-[var(--ink-primary)] focus:outline-none"
                   />
-                  <span className="text-xs text-slate-400">Proben</span>
+                  <span className="text-xs text-[var(--ink-secondary)]">
+                    Proben
+                  </span>
                 </div>
               </div>
             )}
 
             <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-300">
-                Ziel-Stückzahl pro Probe
+              <label className="type-kicker mb-1 block text-[var(--ink-secondary)]">
+                Standard-Stückzahl pro Probe
               </label>
               <div className="flex items-center gap-2">
                 <input
@@ -398,9 +419,11 @@ export default function ProbeplanTab({
                       Math.max(1, Number(e.target.value) || 1)
                     )
                   }
-                  className="w-24 rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm font-bold text-slate-100 focus:border-amber-500 focus:outline-none"
+                  className="font-mono-tabular w-24 border border-[var(--ink-primary)] bg-[var(--bg-paper)] px-3 py-1.5 text-sm font-bold text-[var(--ink-primary)] focus:outline-none"
                 />
-                <span className="text-xs text-slate-400">Stücke / Probe</span>
+                <span className="text-xs text-[var(--ink-secondary)]">
+                  Stücke / Sitzung
+                </span>
               </div>
             </div>
 
@@ -408,150 +431,141 @@ export default function ProbeplanTab({
               type="button"
               disabled={savingConfig}
               onClick={() => handleSaveConfig()}
-              className="rounded-xl border border-amber-500/40 bg-amber-500/15 px-4 py-2 text-xs font-semibold text-amber-300 hover:bg-amber-500/25 cursor-pointer"
+              className="type-kicker w-full border border-[var(--ink-primary)] bg-[var(--bg-recessed)] py-2.5 text-center text-[var(--ink-primary)] hover:bg-[var(--ink-primary)] hover:text-[var(--bg-surface)] cursor-pointer"
             >
-              {savingConfig ? "Berechnet..." : "Einstellungen anwenden"}
+              {savingConfig
+                ? "BERECHNET PLAN..."
+                : "PARAMETER ANWENDEN & NEU BERECHNEN"}
             </button>
           </div>
+        </div>
+      </aside>
 
-          <div className="flex flex-wrap items-center gap-2">
+      {/* Right Main Column: Columns 5–12 */}
+      <section className="space-y-6 lg:col-span-8">
+        {errorBanner && (
+          <div className="flex items-center justify-between border-2 border-[var(--accent)] bg-[var(--bg-surface)] px-4 py-3 text-sm text-[var(--ink-primary)]">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-[var(--accent)] shrink-0" />
+              <span>{errorBanner}</span>
+            </div>
             <button
               type="button"
-              onClick={() => {
-                setNewTitle(`Probe ${sessions.length + 1}`);
-                setShowNewSessionModal(true);
-              }}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500 px-4 py-2 text-xs font-semibold text-slate-950 hover:bg-amber-400 cursor-pointer"
+              onClick={() => setErrorBanner(null)}
+              className="type-kicker underline cursor-pointer"
             >
-              <Plus className="h-4 w-4" />
-              Probetermin hinzufügen
+              SCHLIESSEN
             </button>
           </div>
-        </div>
-      </div>
+        )}
 
-      {errorBanner && (
-        <div className="flex items-center justify-between rounded-xl border border-rose-500/40 bg-rose-500/15 px-4 py-3 text-sm text-rose-200">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-rose-400 shrink-0" />
-            <span>{errorBanner}</span>
+        {upcomingSessions.length === 0 ? (
+          <div className="border-t-2 border-[var(--rule-heavy)] bg-[var(--bg-surface)] p-12 text-center border-x border-b border-x-[var(--rule-border)] border-b-[var(--rule-border)]">
+            <div className="type-kicker text-[var(--ink-muted)]">
+              KEINE OFFENEN PROBEN
+            </div>
+            <h3 className="type-section-h2 mt-2 text-[var(--ink-primary)]">
+              Noch keine anstehenden Proben
+            </h3>
+            <p className="mt-1 text-sm text-[var(--ink-secondary)]">
+              Lege links einen neuen Probetermin an oder erhöhe die Anzahl
+              verbleibender Proben.
+            </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setErrorBanner(null)}
-            className="text-xs underline"
-          >
-            Schließen
-          </button>
-        </div>
-      )}
-
-      {/* Sessions List */}
-      {upcomingSessions.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-900/40 p-12 text-center">
-          <Calendar className="mx-auto h-10 w-10 text-slate-600" />
-          <h3 className="mt-3 text-base font-semibold text-slate-200">
-            Keine anstehenden Proben geplant
-          </h3>
-          <p className="mt-1 text-sm text-slate-400">
-            Lege einen neuen Probetermin an oder erhöhe die Anzahl
-            verbleibender Proben.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {upcomingSessions.map((session) => {
+        ) : (
+          upcomingSessions.map((session, sIdx) => {
             const isActive = session.status === "ACTIVE";
             const availablePiecesToAdd = pieces.filter(
               (p) => !session.pieces.some((sp) => sp.pieceId === p.id)
             );
 
             return (
-              <div
+              <article
                 key={session.id}
-                className={`rounded-2xl border p-5 shadow-lg transition ${
+                style={
+                  {
+                    "--stagger-index": Math.min(sIdx, 8),
+                  } as React.CSSProperties
+                }
+                className={`stagger-item border-t-2 bg-[var(--bg-surface)] p-5 sm:p-6 border-x border-b border-x-[var(--rule-border)] border-b-[var(--rule-border)] ${
                   isActive
-                    ? "border-emerald-500/60 bg-emerald-950/15 ring-1 ring-emerald-500/30"
-                    : "border-slate-800 bg-slate-900/75"
+                    ? "border-t-[var(--accent)]"
+                    : "border-t-[var(--rule-heavy)]"
                 }`}
               >
-                {/* Session Header */}
-                <div className="flex flex-col gap-4 border-b border-slate-800/80 pb-4 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="space-y-1.5">
+                {/* Session Sheet Header */}
+                <div className="flex flex-col gap-4 border-b border-[var(--rule-border)] pb-4 xl:flex-row xl:items-start xl:justify-between">
+                  <div>
                     <div className="flex flex-wrap items-center gap-2.5">
-                      <span className="rounded-lg bg-amber-500/15 px-2.5 py-1 text-xs font-bold text-amber-300 border border-amber-500/30">
-                        #{session.sessionNumber}
+                      <span className="font-mono-tabular border border-[var(--ink-primary)] bg-[var(--bg-recessed)] px-2 py-0.5 text-xs font-bold text-[var(--ink-primary)]">
+                        #{String(session.sessionNumber).padStart(2, "0")}
                       </span>
-                      <h3 className="text-xl font-bold text-slate-100">
+                      <h3 className="type-section-h2 text-[var(--ink-primary)]">
                         {session.title}
                       </h3>
                       {isActive && (
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 px-3 py-0.5 text-xs font-bold text-emerald-300 border border-emerald-500/40 animate-pulse">
-                          ● Laufende Probe (Live)
+                        <span className="type-kicker bg-[var(--accent)] px-2.5 py-0.5 text-[var(--accent-ink)]">
+                          ● LAUFENDE PROBE (LIVE)
                         </span>
                       )}
                       {session.isLocked ? (
-                        <span
-                          title="Manuell bearbeitet oder fixiert – wird nicht automatisch überschrieben"
-                          className="inline-flex items-center gap-1 rounded-full bg-slate-800 px-2.5 py-0.5 text-[11px] font-medium text-slate-300 border border-slate-700"
-                        >
-                          <Lock className="h-3 w-3 text-amber-400" /> Manuell
-                          fixiert
+                        <span className="type-kicker inline-flex items-center gap-1 border border-[var(--ink-primary)] bg-[var(--bg-paper)] px-2 py-0.5 text-[var(--ink-primary)]">
+                          <Lock className="h-3 w-3" /> MANUELL FIXIERT
                         </span>
                       ) : (
-                        <span
-                          title="Wird automatisch nach Übungsbedarf & Anwesenheit aktualisiert"
-                          className="inline-flex items-center gap-1 rounded-full bg-indigo-500/15 px-2.5 py-0.5 text-[11px] font-medium text-indigo-300 border border-indigo-500/30"
-                        >
-                          <Sparkles className="h-3 w-3" /> Auto-Planung
+                        <span className="type-kicker inline-flex items-center gap-1 border border-[var(--rule-border)] bg-[var(--bg-paper)] px-2 py-0.5 text-[var(--ink-secondary)]">
+                          <Sparkles className="h-3 w-3" /> AUTO-PLANUNG
                         </span>
                       )}
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-4 text-xs text-slate-300">
-                      <span className="inline-flex items-center gap-1.5">
-                        <Calendar className="h-3.5 w-3.5 text-amber-400" />
-                        {session.scheduledDate
-                          ? new Date(session.scheduledDate).toLocaleString(
-                              "de-DE",
-                              {
-                                weekday: "short",
-                                day: "2-digit",
-                                month: "2-digit",
-                                year: "numeric",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              }
-                            )
-                          : "Kein festes Datum (flexibel)"}
+                    <div className="font-mono-tabular mt-2 flex flex-wrap items-center gap-4 text-xs text-[var(--ink-secondary)]">
+                      <span>
+                        TERMIN:{" "}
+                        <strong className="text-[var(--ink-primary)]">
+                          {session.scheduledDate
+                            ? new Date(session.scheduledDate).toLocaleString(
+                                "de-DE",
+                                {
+                                  weekday: "short",
+                                  day: "2-digit",
+                                  month: "2-digit",
+                                  year: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                }
+                              )
+                            : "Flexibel (ohne festes Datum)"}
+                        </strong>
                       </span>
                       {session.location && (
-                        <span className="inline-flex items-center gap-1.5 text-slate-300">
-                          <MapPin className="h-3.5 w-3.5 text-cyan-400" />
-                          {session.location}
+                        <span>
+                          ORT:{" "}
+                          <strong className="text-[var(--ink-primary)]">
+                            {session.location}
+                          </strong>
                         </span>
                       )}
                     </div>
 
                     {session.additionalInfo && (
-                      <div className="mt-2 flex items-start gap-2 rounded-xl border border-slate-800 bg-slate-950/70 px-3 py-2 text-xs text-slate-200">
-                        <FileText className="mt-0.5 h-3.5 w-3.5 text-amber-400 shrink-0" />
-                        <div className="whitespace-pre-wrap">
-                          {session.additionalInfo}
-                        </div>
+                      <div className="mt-2.5 border-l-2 border-[var(--ink-primary)] bg-[var(--bg-paper)] px-3 py-2 text-xs text-[var(--ink-primary)] whitespace-pre-wrap">
+                        <span className="type-kicker block text-[var(--ink-muted)]">
+                          ZUSATZINFORMATIONEN ZUM TERMIN:
+                        </span>
+                        {session.additionalInfo}
                       </div>
                     )}
                   </div>
 
-                  {/* Session Control Buttons */}
-                  <div className="flex flex-wrap items-center gap-2">
+                  {/* Session Action Bar */}
+                  <div className="flex flex-wrap items-center gap-1.5">
                     <button
                       type="button"
                       onClick={() => openEditSessionModal(session)}
-                      className="inline-flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs font-medium text-slate-200 hover:border-amber-500 cursor-pointer"
+                      className="type-kicker inline-flex items-center gap-1 border border-[var(--rule-border)] bg-[var(--bg-paper)] px-2.5 py-1.5 text-[var(--ink-primary)] hover:border-[var(--ink-primary)] cursor-pointer"
                     >
-                      <Edit3 className="h-3.5 w-3.5" />
-                      Termin & Infos bearbeiten
+                      <Edit3 className="h-3.5 w-3.5" /> TERMIN & INFOS
                     </button>
 
                     <button
@@ -561,22 +575,15 @@ export default function ProbeplanTab({
                           action: "toggle-lock",
                         })
                       }
-                      className="inline-flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs font-medium text-slate-200 hover:border-slate-500 cursor-pointer"
-                      title={
-                        session.isLocked
-                          ? "Fixierung aufheben"
-                          : "Aktuelle Stückliste & Reihenfolge fixieren"
-                      }
+                      className="type-kicker inline-flex items-center gap-1 border border-[var(--rule-border)] bg-[var(--bg-paper)] px-2.5 py-1.5 text-[var(--ink-primary)] hover:border-[var(--ink-primary)] cursor-pointer"
                     >
                       {session.isLocked ? (
                         <>
-                          <Unlock className="h-3.5 w-3.5 text-amber-400" />
-                          Entsperren
+                          <Unlock className="h-3.5 w-3.5" /> ENTSPERREN
                         </>
                       ) : (
                         <>
-                          <Lock className="h-3.5 w-3.5 text-slate-400" />
-                          Fixieren
+                          <Lock className="h-3.5 w-3.5" /> FIXIEREN
                         </>
                       )}
                     </button>
@@ -586,11 +593,10 @@ export default function ProbeplanTab({
                       onClick={() =>
                         handleSessionAction(session.id, { action: "auto-fill" })
                       }
-                      className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-500/40 bg-indigo-500/15 px-3 py-1.5 text-xs font-medium text-indigo-200 hover:bg-indigo-500/25 cursor-pointer"
-                      title="Stücke für diese Probe anhand von Übungsbedarf, Sänger-Anwesenheit und Solisten-Abwesenheit neu berechnen"
+                      className="type-kicker inline-flex items-center gap-1 border border-[var(--rule-border)] bg-[var(--bg-paper)] px-2.5 py-1.5 text-[var(--ink-primary)] hover:border-[var(--ink-primary)] cursor-pointer"
+                      title="Stücke anhand von Übungsbedarf, Sänger-Anwesenheit und Solisten-Abwesenheit neu berechnen"
                     >
-                      <Sparkles className="h-3.5 w-3.5" />
-                      Auto-Vorschlag
+                      <Sparkles className="h-3.5 w-3.5" /> AUTO-VORSCHLAG
                     </button>
 
                     {!isActive ? (
@@ -599,10 +605,9 @@ export default function ProbeplanTab({
                         onClick={() =>
                           handleSessionAction(session.id, { action: "start" })
                         }
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 px-3.5 py-1.5 text-xs font-bold text-slate-950 hover:bg-emerald-400 cursor-pointer"
+                        className="type-kicker inline-flex items-center gap-1 bg-[var(--ink-primary)] px-3 py-1.5 text-[var(--bg-surface)] hover:bg-[var(--accent)] cursor-pointer"
                       >
-                        <Play className="h-3.5 w-3.5" />
-                        Probe starten
+                        <Play className="h-3.5 w-3.5" /> PROBE STARTEN
                       </button>
                     ) : (
                       <button
@@ -612,20 +617,19 @@ export default function ProbeplanTab({
                             action: "complete",
                           })
                         }
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500 px-3.5 py-1.5 text-xs font-bold text-slate-950 hover:bg-amber-400 cursor-pointer"
+                        className="type-kicker inline-flex items-center gap-1 bg-[var(--accent)] px-3 py-1.5 text-[var(--accent-ink)] cursor-pointer"
                       >
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                        Probe abschließen
+                        <CheckCircle2 className="h-3.5 w-3.5" /> ABSCHLIESSEN
                       </button>
                     )}
 
                     <button
                       type="button"
                       onClick={() => handleDeleteSession(session)}
-                      className="rounded-xl border border-slate-800 bg-slate-950 p-1.5 text-slate-400 hover:border-rose-500/40 hover:text-rose-400 cursor-pointer"
+                      className="border border-[var(--rule-border)] bg-[var(--bg-paper)] p-1.5 text-[var(--ink-secondary)] hover:border-[var(--accent)] hover:text-[var(--accent)] cursor-pointer"
                       title="Probe löschen"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 </div>
@@ -633,13 +637,12 @@ export default function ProbeplanTab({
                 {/* Attendance Filters: Present Singers & Absent Soloists */}
                 {(suggestions.singers.length > 0 ||
                   suggestions.soloists.length > 0) && (
-                  <div className="mt-4 grid grid-cols-1 gap-3 rounded-xl border border-slate-800/90 bg-slate-950/60 p-3.5 lg:grid-cols-2">
-                    {/* Anwesende Sänger */}
-                    <div>
-                      <div className="mb-1.5 flex items-center justify-between">
-                        <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-300">
-                          <Mic className="h-3.5 w-3.5 text-amber-400" />
-                          Anwesende Sänger (Filtert nur Lieder dieser Sänger):
+                  <div className="mt-4 grid grid-cols-1 gap-px border border-[var(--rule-border)] bg-[var(--rule-border)] md:grid-cols-2">
+                    {/* Present Singers */}
+                    <div className="bg-[var(--bg-paper)] p-3">
+                      <div className="mb-2 flex items-center justify-between">
+                        <span className="type-kicker text-[var(--ink-secondary)]">
+                          ANWESENDE SÄNGER (NUR DIESE LIEDER PROBEN)
                         </span>
                         {session.presentSingerList.length > 0 && (
                           <button
@@ -650,15 +653,15 @@ export default function ProbeplanTab({
                                 presentSingers: "",
                               })
                             }
-                            className="text-[11px] text-amber-400 hover:underline cursor-pointer"
+                            className="type-kicker text-[var(--accent)] underline cursor-pointer"
                           >
-                            Alle erlauben
+                            ALLE ERLAUBEN
                           </button>
                         )}
                       </div>
                       {suggestions.singers.length === 0 ? (
-                        <p className="text-xs text-slate-500">
-                          Noch keine Sänger bei den Stücken hinterlegt.
+                        <p className="text-xs text-[var(--ink-muted)]">
+                          Keine Sänger im Repertoire hinterlegt.
                         </p>
                       ) : (
                         <div className="flex flex-wrap gap-1.5">
@@ -673,10 +676,10 @@ export default function ProbeplanTab({
                                 onClick={() =>
                                   toggleSingerInSession(session, singer)
                                 }
-                                className={`rounded-lg border px-2.5 py-1 text-xs font-medium transition cursor-pointer ${
+                                className={`ui-transition border px-2.5 py-1 text-xs font-medium cursor-pointer ${
                                   selected
-                                    ? "border-amber-400 bg-amber-500 text-slate-950 font-bold"
-                                    : "border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500"
+                                    ? "border-[var(--ink-primary)] bg-[var(--ink-primary)] text-[var(--bg-surface)]"
+                                    : "border-[var(--rule-border)] bg-[var(--bg-surface)] text-[var(--ink-secondary)] hover:border-[var(--ink-primary)]"
                                 }`}
                               >
                                 {selected ? "✓ " : ""}
@@ -688,12 +691,11 @@ export default function ProbeplanTab({
                       )}
                     </div>
 
-                    {/* Abwesende Solisten */}
-                    <div>
-                      <div className="mb-1.5 flex items-center justify-between">
-                        <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-300">
-                          <Guitar className="h-3.5 w-3.5 text-rose-400" />
-                          Abwesende Solisten (Schließt deren Solo-Stücke aus):
+                    {/* Absent Soloists */}
+                    <div className="bg-[var(--bg-paper)] p-3">
+                      <div className="mb-2 flex items-center justify-between">
+                        <span className="type-kicker text-[var(--ink-secondary)]">
+                          SOLISTEN-ABWESENHEIT (SCHLIESST SOLI AUS)
                         </span>
                         {session.absentSoloistList.length > 0 && (
                           <button
@@ -704,15 +706,15 @@ export default function ProbeplanTab({
                                 absentSoloists: "",
                               })
                             }
-                            className="text-[11px] text-rose-400 hover:underline cursor-pointer"
+                            className="type-kicker text-[var(--accent)] underline cursor-pointer"
                           >
-                            Zurücksetzen
+                            ZURÜCKSETZEN
                           </button>
                         )}
                       </div>
                       {suggestions.soloists.length === 0 ? (
-                        <p className="text-xs text-slate-500">
-                          Noch keine Solisten bei den Stücken hinterlegt.
+                        <p className="text-xs text-[var(--ink-muted)]">
+                          Keine Solisten im Repertoire hinterlegt.
                         </p>
                       ) : (
                         <div className="flex flex-wrap gap-1.5">
@@ -727,13 +729,13 @@ export default function ProbeplanTab({
                                 onClick={() =>
                                   toggleAbsentSoloistInSession(session, soloist)
                                 }
-                                className={`rounded-lg border px-2.5 py-1 text-xs font-medium transition cursor-pointer ${
+                                className={`ui-transition border px-2.5 py-1 text-xs font-medium cursor-pointer ${
                                   isAbsent
-                                    ? "border-rose-400 bg-rose-500 text-white font-bold"
-                                    : "border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500"
+                                    ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-ink)]"
+                                    : "border-[var(--rule-border)] bg-[var(--bg-surface)] text-[var(--ink-secondary)] hover:border-[var(--ink-primary)]"
                                 }`}
                               >
-                                {isAbsent ? "✕ Abwesend: " : ""}
+                                {isAbsent ? "✕ ABWESEND: " : ""}
                                 {soloist}
                               </button>
                             );
@@ -744,12 +746,11 @@ export default function ProbeplanTab({
                   </div>
                 )}
 
-                {/* Pieces in this Rehearsal Session */}
-                <div className="mt-4 space-y-2.5">
-                  <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-slate-400">
-                    <span>
-                      Geplante Stücke ({session.pieces.length}) – Reihenfolge &
-                      Protokoll
+                {/* Session Piece List */}
+                <div className="mt-5">
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="type-kicker text-[var(--ink-secondary)]">
+                      PROGRAMMFOLGE DER PROBE ({session.pieces.length} STÜCKE)
                     </span>
                     {session.pieces.length > 0 && (
                       <button
@@ -759,21 +760,21 @@ export default function ProbeplanTab({
                             action: "clear-pieces",
                           })
                         }
-                        className="text-[11px] font-normal text-slate-400 hover:text-rose-400 cursor-pointer"
+                        className="type-kicker text-[var(--ink-muted)] hover:text-[var(--accent)] underline cursor-pointer"
                       >
-                        Alle Stücke aus Probe leeren
+                        LISTE LEEREN
                       </button>
                     )}
                   </div>
 
                   {session.pieces.length === 0 ? (
-                    <div className="rounded-xl border border-dashed border-slate-800 bg-slate-950/40 p-6 text-center text-xs text-slate-400">
-                      Noch keine Stücke in dieser Probe. Füge unten manuell
-                      Stücke hinzu, rücke das nächste Stück vor oder klicke auf
-                      „Auto-Vorschlag“.
+                    <div className="border border-dashed border-[var(--rule-border)] bg-[var(--bg-paper)] p-6 text-center text-xs text-[var(--ink-secondary)]">
+                      Keine Stücke in dieser Probe. Füge unten manuell Stücke
+                      hinzu, rücke das nächste Stück vor oder klicke auf
+                      „AUTO-VORSCHLAG“.
                     </div>
                   ) : (
-                    <div className="space-y-2">
+                    <div className="divide-y divide-[var(--rule-border)] border border-[var(--rule-border)] bg-[var(--bg-paper)]">
                       {session.pieces.map((sp, idx) => {
                         const logKey = `${session.id}_${sp.pieceId}`;
                         const isLogOpen = openLogKey === logKey;
@@ -785,27 +786,24 @@ export default function ProbeplanTab({
                           : null;
 
                         return (
-                          <div
-                            key={sp.id}
-                            className="rounded-xl border border-slate-800 bg-slate-950/80 p-3.5 transition hover:border-slate-700"
-                          >
+                          <div key={sp.id} className="p-3.5">
                             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                               <div className="flex items-start gap-3">
                                 {/* Reorder Controls */}
-                                <div className="flex flex-col items-center gap-0.5 pt-0.5">
+                                <div className="flex flex-col items-center border border-[var(--rule-border)] bg-[var(--bg-surface)] px-1.5 py-1">
                                   <button
                                     type="button"
                                     disabled={idx === 0}
                                     onClick={() =>
                                       handleMovePiece(session, idx, "up")
                                     }
-                                    className="rounded p-0.5 text-slate-400 hover:bg-slate-800 hover:text-slate-100 disabled:opacity-25 cursor-pointer"
-                                    title="Nach oben schieben"
+                                    className="text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] disabled:opacity-25 cursor-pointer"
+                                    title="Nach oben"
                                   >
                                     <ArrowUp className="h-3.5 w-3.5" />
                                   </button>
-                                  <span className="text-xs font-bold text-amber-400">
-                                    {idx + 1}.
+                                  <span className="font-mono-tabular text-xs font-bold text-[var(--ink-primary)]">
+                                    {String(idx + 1).padStart(2, "0")}
                                   </span>
                                   <button
                                     type="button"
@@ -815,65 +813,64 @@ export default function ProbeplanTab({
                                     onClick={() =>
                                       handleMovePiece(session, idx, "down")
                                     }
-                                    className="rounded p-0.5 text-slate-400 hover:bg-slate-800 hover:text-slate-100 disabled:opacity-25 cursor-pointer"
-                                    title="Nach unten schieben"
+                                    className="text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] disabled:opacity-25 cursor-pointer"
+                                    title="Nach unten"
                                   >
                                     <ArrowDown className="h-3.5 w-3.5" />
                                   </button>
                                 </div>
 
                                 <div>
-                                  <div className="flex flex-wrap items-center gap-2">
-                                    <span className="font-bold text-slate-100">
+                                  <div className="flex flex-wrap items-baseline gap-2">
+                                    <h4 className="type-piece-h3 text-[var(--ink-primary)]">
                                       {sp.piece.title}
-                                    </span>
+                                    </h4>
                                     {sp.piece.artist && (
-                                      <span className="text-xs text-slate-400">
-                                        ({sp.piece.artist})
+                                      <span className="text-xs text-[var(--ink-secondary)]">
+                                        — {sp.piece.artist}
                                       </span>
                                     )}
                                     {sp.isManualOverride && (
-                                      <span className="rounded bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-300">
-                                        Manuell
+                                      <span className="type-kicker border border-[var(--rule-border)] bg-[var(--bg-surface)] px-1.5 py-0.5 text-[var(--ink-secondary)]">
+                                        MANUELL
                                       </span>
                                     )}
                                     {!sp.eligible && sp.ineligibleReason && (
-                                      <span className="inline-flex items-center gap-1 rounded bg-rose-500/20 px-2 py-0.5 text-[11px] font-medium text-rose-300 border border-rose-500/30">
+                                      <span className="type-kicker inline-flex items-center gap-1 bg-[var(--accent)] px-2 py-0.5 text-[var(--accent-ink)]">
                                         <AlertTriangle className="h-3 w-3" />
                                         {sp.ineligibleReason}
                                       </span>
                                     )}
                                   </div>
 
-                                  <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-slate-400">
+                                  <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-[var(--ink-secondary)]">
                                     {sp.piece.singers && (
                                       <span>
-                                        🎤{" "}
-                                        <strong className="text-slate-200">
+                                        Sänger:{" "}
+                                        <strong className="text-[var(--ink-primary)]">
                                           {sp.piece.singers}
                                         </strong>
                                       </span>
                                     )}
                                     {sp.piece.soloists && (
                                       <span>
-                                        🎸{" "}
-                                        <strong className="text-slate-200">
+                                        Solist:{" "}
+                                        <strong className="text-[var(--ink-primary)]">
                                           {sp.piece.soloists}
                                         </strong>
                                       </span>
                                     )}
-                                    <span className="text-amber-300/90">
-                                      {sp.piece.priorityReasons.join(" • ")}
+                                    <span className="font-mono-tabular text-[var(--ink-muted)]">
+                                      [{sp.piece.priorityReasons.join(" • ")}]
                                     </span>
                                   </div>
 
-                                  {/* Logged players badges */}
                                   {pieceLogs.length > 0 && (
                                     <div className="mt-2 flex flex-wrap gap-1.5">
                                       {pieceLogs.map((l) => (
                                         <span
                                           key={l.id}
-                                          className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-300 border border-emerald-500/25"
+                                          className="font-mono-tabular inline-flex items-center gap-1 border border-[var(--ink-primary)] bg-[var(--bg-surface)] px-2 py-0.5 text-[11px] text-[var(--ink-primary)]"
                                         >
                                           <Check className="h-3 w-3" />
                                           {l.userName}: Sicherheit{" "}
@@ -887,23 +884,23 @@ export default function ProbeplanTab({
                                 </div>
                               </div>
 
-                              {/* Right Actions: Log feedback & Remove from Session */}
-                              <div className="flex items-center gap-2 self-end sm:self-center">
+                              {/* Right Actions: Log & Delete */}
+                              <div className="flex items-center gap-1.5 self-end sm:self-center">
                                 <button
                                   type="button"
                                   onClick={() =>
                                     openLogDrawer(session.id, sp.pieceId)
                                   }
-                                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${
+                                  className={`type-kicker ui-transition inline-flex items-center gap-1.5 border px-3 py-1.5 cursor-pointer ${
                                     mySessionLog
-                                      ? "border border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
-                                      : "bg-amber-500/20 text-amber-300 border border-amber-500/30 hover:bg-amber-500/30"
+                                      ? "border-[var(--ink-primary)] bg-[var(--bg-recessed)] text-[var(--ink-primary)]"
+                                      : "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-ink)]"
                                   }`}
                                 >
                                   <CheckCircle2 className="h-3.5 w-3.5" />
                                   {mySessionLog
-                                    ? "Mein Log anpassen"
-                                    : "Proben-Log eintragen"}
+                                    ? "LOG ANPASSEN"
+                                    : "PROBEN-LOG"}
                                 </button>
 
                                 <button
@@ -914,40 +911,37 @@ export default function ProbeplanTab({
                                       pieceId: sp.pieceId,
                                     })
                                   }
-                                  className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-500/15 hover:text-rose-400 cursor-pointer"
-                                  title="Stück aus dieser Probe entfernen"
+                                  className="border border-[var(--rule-border)] bg-[var(--bg-surface)] p-1.5 text-[var(--ink-secondary)] hover:border-[var(--accent)] hover:text-[var(--accent)] cursor-pointer"
+                                  title="Stück aus Probe entfernen"
                                 >
-                                  <Trash2 className="h-4 w-4" />
+                                  <Trash2 className="h-3.5 w-3.5" />
                                 </button>
                               </div>
                             </div>
 
-                            {/* Expandable Exact Player Log Form */}
+                            {/* Exact Player Log Drawer */}
                             {isLogOpen && (
-                              <div className="mt-3 rounded-xl border border-amber-500/30 bg-slate-900 p-4">
-                                <div className="mb-3 flex items-center justify-between">
-                                  <span className="text-xs font-bold text-amber-300">
-                                    Proben-Feedback für „{sp.piece.title}“ (
+                              <div className="mt-3 border-2 border-[var(--ink-primary)] bg-[var(--bg-surface)] p-4">
+                                <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+                                  <span className="type-kicker text-[var(--accent)]">
+                                    SPIELER-PROTOKOLL FÜR „{sp.piece.title}“ (
                                     {currentUser?.name})
                                   </span>
-                                  <span className="text-[11px] text-slate-400">
-                                    Aktualisiert deine Werte & speichert das
-                                    Protokoll
+                                  <span className="font-mono-tabular text-[11px] text-[var(--ink-muted)]">
+                                    Aktualisiert deine Repertoire-Werte
                                   </span>
                                 </div>
 
                                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                   <ScoreSelector
-                                    label="Wie sicher fühlst du dich jetzt? (1 = unsicher, 5 = sehr sicher)"
+                                    label="Neue Sicherheit (1 = unsicher, 5 = sicher)"
                                     value={logConfidence}
                                     onChange={setLogConfidence}
-                                    colorScheme="emerald"
                                   />
                                   <ScoreSelector
-                                    label="Wie viel Übungsbedarf besteht noch? (1 = gering, 5 = hoch)"
+                                    label="Neuer Übungsbedarf (1 = gering, 5 = hoch)"
                                     value={logPractice}
                                     onChange={setLogPractice}
-                                    colorScheme="rose"
                                   />
                                 </div>
 
@@ -958,16 +952,16 @@ export default function ProbeplanTab({
                                     onChange={(e) =>
                                       setLogComment(e.target.value)
                                     }
-                                    placeholder="Optionaler Hinweis (z.B. Übergang zum Refrain noch unsauber)..."
-                                    className="flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-slate-100 focus:border-amber-500 focus:outline-none"
+                                    placeholder="Optionale Anmerkung zur Probe (z.B. Tempo, Intonation, Solo-Übergang)..."
+                                    className="flex-1 border border-[var(--rule-border)] bg-[var(--bg-paper)] px-3 py-2 text-xs text-[var(--ink-primary)] focus:border-[var(--ink-primary)] focus:outline-none"
                                   />
                                   <div className="flex items-center gap-2">
                                     <button
                                       type="button"
                                       onClick={() => setOpenLogKey(null)}
-                                      className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 cursor-pointer"
+                                      className="type-kicker border border-[var(--rule-border)] bg-[var(--bg-paper)] px-3 py-2 text-[var(--ink-secondary)] cursor-pointer"
                                     >
-                                      Abbrechen
+                                      ABBRECHEN
                                     </button>
                                     <button
                                       type="button"
@@ -975,11 +969,11 @@ export default function ProbeplanTab({
                                       onClick={() =>
                                         submitPlayerLog(session.id, sp.pieceId)
                                       }
-                                      className="rounded-lg bg-amber-500 px-4 py-1.5 text-xs font-bold text-slate-950 hover:bg-amber-400 cursor-pointer"
+                                      className="type-kicker bg-[var(--accent)] px-4 py-2 text-[var(--accent-ink)] cursor-pointer"
                                     >
                                       {submittingLog
-                                        ? "Speichert..."
-                                        : "Log speichern"}
+                                        ? "SPEICHERT..."
+                                        : "LOG SPEICHERN"}
                                     </button>
                                   </div>
                                 </div>
@@ -991,8 +985,8 @@ export default function ProbeplanTab({
                     </div>
                   )}
 
-                  {/* Bottom Bar: Add Piece Manually OR Pull Next Automatically */}
-                  <div className="mt-4 flex flex-col gap-3 rounded-xl border border-slate-800/90 bg-slate-950/60 p-3 sm:flex-row sm:items-center sm:justify-between">
+                  {/* Footer Controls: Manual Add Piece + Pull Next Piece */}
+                  <div className="mt-3 flex flex-col gap-2 border border-[var(--rule-border)] bg-[var(--bg-recessed)] p-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex flex-1 items-center gap-2">
                       <select
                         value={selectedPieceToAdd[session.id] || ""}
@@ -1002,7 +996,7 @@ export default function ProbeplanTab({
                             [session.id]: e.target.value,
                           }))
                         }
-                        className="flex-1 rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs text-slate-200 focus:border-amber-500 focus:outline-none"
+                        className="flex-1 border border-[var(--rule-border)] bg-[var(--bg-surface)] px-3 py-2 text-xs text-[var(--ink-primary)] focus:border-[var(--ink-primary)] focus:outline-none"
                       >
                         <option value="">
                           + Stück manuell zur Probe hinzufügen...
@@ -1010,9 +1004,9 @@ export default function ProbeplanTab({
                         {availablePiecesToAdd.map((p) => (
                           <option key={p.id} value={p.id}>
                             {p.title}
-                            {p.singers ? ` (🎤 ${p.singers})` : ""}
-                            {p.soloists ? ` [🎸 ${p.soloists}]` : ""} – Prio{" "}
-                            {p.priorityScore.toFixed(1)}
+                            {p.singers ? ` (Sänger: ${p.singers})` : ""}
+                            {p.soloists ? ` [Solist: ${p.soloists}]` : ""} —
+                            Prio {p.priorityScore.toFixed(1)}
                           </option>
                         ))}
                       </select>
@@ -1032,9 +1026,9 @@ export default function ProbeplanTab({
                             [session.id]: "",
                           }));
                         }}
-                        className="inline-flex items-center gap-1 rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-100 hover:bg-slate-700 disabled:opacity-40 cursor-pointer"
+                        className="type-kicker inline-flex items-center gap-1 border border-[var(--ink-primary)] bg-[var(--bg-surface)] px-3 py-2 text-[var(--ink-primary)] disabled:opacity-40 cursor-pointer"
                       >
-                        <Plus className="h-3.5 w-3.5" /> Hinzufügen
+                        <Plus className="h-3.5 w-3.5" /> HINZUFÜGEN
                       </button>
                     </div>
 
@@ -1043,31 +1037,33 @@ export default function ProbeplanTab({
                       onClick={() =>
                         handleSessionAction(session.id, { action: "pull-next" })
                       }
-                      className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/15 px-3.5 py-1.5 text-xs font-semibold text-amber-300 hover:bg-amber-500/25 cursor-pointer"
-                      title="Zieht automatisch das dringendste noch nicht enthaltene Stück (passend zu anwesenden Sängern & ohne abwesende Solisten) in diese Probe"
+                      className="type-kicker inline-flex items-center justify-center gap-1.5 bg-[var(--ink-primary)] px-3.5 py-2 text-[var(--bg-surface)] hover:bg-[var(--accent)] cursor-pointer"
                     >
                       <FastForward className="h-3.5 w-3.5" />
-                      Nächstes Stück automatisch vorrücken
+                      NÄCHSTES STÜCK VORRÜCKEN
                     </button>
                   </div>
                 </div>
-              </div>
+              </article>
             );
-          })}
-        </div>
-      )}
+          })
+        )}
+      </section>
 
       {/* Modal: Create New Rehearsal Session */}
       {showNewSessionModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
-          <div className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
-            <h2 className="text-lg font-bold text-slate-100">
-              Neuen Probetermin anlegen
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="max-h-[90vh] w-full max-w-xl overflow-y-auto border-2 border-[var(--rule-heavy)] bg-[var(--bg-surface)] p-6">
+            <div className="type-kicker text-[var(--accent)]">
+              NEUER PROBETERMIN
+            </div>
+            <h2 className="type-section-h2 mt-1 text-[var(--ink-primary)]">
+              Probetermin anlegen
             </h2>
-            <form onSubmit={handleCreateSession} className="mt-4 space-y-4">
+            <form onSubmit={handleCreateSession} className="mt-5 space-y-4">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  <label className="type-kicker mb-1.5 block text-[var(--ink-secondary)]">
                     Bezeichnung *
                   </label>
                   <input
@@ -1075,38 +1071,38 @@ export default function ProbeplanTab({
                     required
                     value={newTitle}
                     onChange={(e) => setNewTitle(e.target.value)}
-                    placeholder="z.B. Probe 5 / Generalprobe"
-                    className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:border-amber-500 focus:outline-none"
+                    placeholder="z.B. Probe 5 / Hauptprobe"
+                    className="w-full border border-[var(--rule-border)] bg-[var(--bg-paper)] px-3 py-2 text-sm text-[var(--ink-primary)] focus:border-[var(--ink-primary)] focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  <label className="type-kicker mb-1.5 block text-[var(--ink-secondary)]">
                     Datum & Uhrzeit (Optional)
                   </label>
                   <input
                     type="datetime-local"
                     value={newDate}
                     onChange={(e) => setNewDate(e.target.value)}
-                    className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:border-amber-500 focus:outline-none"
+                    className="w-full border border-[var(--rule-border)] bg-[var(--bg-paper)] px-3 py-2 text-sm text-[var(--ink-primary)] focus:border-[var(--ink-primary)] focus:outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-400">
+                <label className="type-kicker mb-1.5 block text-[var(--ink-secondary)]">
                   Ort / Raum
                 </label>
                 <input
                   type="text"
                   value={newLocation}
                   onChange={(e) => setNewLocation(e.target.value)}
-                  placeholder="z.B. Proberaum / Gemeindesaal"
-                  className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:border-amber-500 focus:outline-none"
+                  placeholder="z.B. Proberaum"
+                  className="w-full border border-[var(--rule-border)] bg-[var(--bg-paper)] px-3 py-2 text-sm text-[var(--ink-primary)] focus:border-[var(--ink-primary)] focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-400">
+                <label className="type-kicker mb-1.5 block text-[var(--ink-secondary)]">
                   Freitext-Zusatzinformationen zum Termin
                 </label>
                 <textarea
@@ -1114,13 +1110,13 @@ export default function ProbeplanTab({
                   value={newInfo}
                   onChange={(e) => setNewInfo(e.target.value)}
                   placeholder="z.B. Schwerpunkt Bläser-Satz, Treffen 19:15 Uhr..."
-                  className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:border-amber-500 focus:outline-none"
+                  className="w-full border border-[var(--rule-border)] bg-[var(--bg-paper)] px-3 py-2 text-sm text-[var(--ink-primary)] focus:border-[var(--ink-primary)] focus:outline-none"
                 />
               </div>
 
               {suggestions.singers.length > 0 && (
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  <label className="type-kicker mb-1.5 block text-[var(--ink-secondary)]">
                     Anwesende Sänger (leer lassen = alle)
                   </label>
                   <div className="flex flex-wrap gap-1.5">
@@ -1137,10 +1133,10 @@ export default function ProbeplanTab({
                                 : [...prev, s]
                             )
                           }
-                          className={`rounded-lg border px-2.5 py-1 text-xs font-medium cursor-pointer ${
+                          className={`border px-2.5 py-1 text-xs font-medium cursor-pointer ${
                             active
-                              ? "border-amber-400 bg-amber-500 text-slate-950 font-bold"
-                              : "border-slate-700 bg-slate-950 text-slate-300"
+                              ? "border-[var(--ink-primary)] bg-[var(--ink-primary)] text-[var(--bg-surface)]"
+                              : "border-[var(--rule-border)] bg-[var(--bg-paper)] text-[var(--ink-secondary)]"
                           }`}
                         >
                           {active ? "✓ " : ""}
@@ -1154,8 +1150,8 @@ export default function ProbeplanTab({
 
               {suggestions.soloists.length > 0 && (
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-400">
-                    Abwesende Solisten (schließt deren Solo-Stücke aus)
+                  <label className="type-kicker mb-1.5 block text-[var(--ink-secondary)]">
+                    Abwesende Solisten (schließt deren Soli aus)
                   </label>
                   <div className="flex flex-wrap gap-1.5">
                     {suggestions.soloists.map((s) => {
@@ -1171,10 +1167,10 @@ export default function ProbeplanTab({
                                 : [...prev, s]
                             )
                           }
-                          className={`rounded-lg border px-2.5 py-1 text-xs font-medium cursor-pointer ${
+                          className={`border px-2.5 py-1 text-xs font-medium cursor-pointer ${
                             active
-                              ? "border-rose-400 bg-rose-500 text-white font-bold"
-                              : "border-slate-700 bg-slate-950 text-slate-300"
+                              ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-ink)]"
+                              : "border-[var(--rule-border)] bg-[var(--bg-paper)] text-[var(--ink-secondary)]"
                           }`}
                         >
                           {active ? "✕ Abwesend: " : ""}
@@ -1186,30 +1182,28 @@ export default function ProbeplanTab({
                 </div>
               )}
 
-              <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+              <label className="flex items-center gap-2 text-xs text-[var(--ink-primary)] cursor-pointer">
                 <input
                   type="checkbox"
                   checked={newIsManual}
                   onChange={(e) => setNewIsManual(e.target.checked)}
-                  className="rounded border-slate-700 bg-slate-950 text-amber-500"
                 />
-                Leere Probe für komplett manuelle Stückauswahl anlegen (ohne
-                Auto-Befüllung)
+                Leere Probe für komplett manuelle Stückauswahl anlegen
               </label>
 
-              <div className="flex justify-end gap-3 pt-2">
+              <div className="flex justify-end gap-2 pt-3">
                 <button
                   type="button"
                   onClick={() => setShowNewSessionModal(false)}
-                  className="rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 cursor-pointer"
+                  className="type-kicker border border-[var(--rule-border)] bg-[var(--bg-paper)] px-4 py-2.5 text-[var(--ink-secondary)] cursor-pointer"
                 >
-                  Abbrechen
+                  ABBRECHEN
                 </button>
                 <button
                   type="submit"
-                  className="rounded-xl bg-amber-500 px-5 py-2 text-sm font-semibold text-slate-950 hover:bg-amber-400 cursor-pointer"
+                  className="type-kicker bg-[var(--accent)] px-5 py-2.5 text-[var(--accent-ink)] cursor-pointer"
                 >
-                  Probetermin anlegen
+                  PROBETERMIN ANLEGEN
                 </button>
               </div>
             </form>
@@ -1219,14 +1213,17 @@ export default function ProbeplanTab({
 
       {/* Modal: Edit Session Metadata */}
       {editingSession && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
-            <h2 className="text-lg font-bold text-slate-100">
-              Probetermin & Zusatzinfos bearbeiten
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-lg border-2 border-[var(--rule-heavy)] bg-[var(--bg-surface)] p-6">
+            <div className="type-kicker text-[var(--accent)]">
+              TERMIN-BEARBEITUNG
+            </div>
+            <h2 className="type-section-h2 mt-1 text-[var(--ink-primary)]">
+              Probetermin & Zusatzinfos
             </h2>
-            <form onSubmit={handleSaveSessionMeta} className="mt-4 space-y-4">
+            <form onSubmit={handleSaveSessionMeta} className="mt-5 space-y-4">
               <div>
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-400">
+                <label className="type-kicker mb-1.5 block text-[var(--ink-secondary)]">
                   Bezeichnung
                 </label>
                 <input
@@ -1234,24 +1231,24 @@ export default function ProbeplanTab({
                   required
                   value={editTitle}
                   onChange={(e) => setEditTitle(e.target.value)}
-                  className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:border-amber-500 focus:outline-none"
+                  className="w-full border border-[var(--rule-border)] bg-[var(--bg-paper)] px-3 py-2 text-sm text-[var(--ink-primary)] focus:border-[var(--ink-primary)] focus:outline-none"
                 />
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  <label className="type-kicker mb-1.5 block text-[var(--ink-secondary)]">
                     Datum & Uhrzeit
                   </label>
                   <input
                     type="datetime-local"
                     value={editDate}
                     onChange={(e) => setEditDate(e.target.value)}
-                    className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:border-amber-500 focus:outline-none"
+                    className="w-full border border-[var(--rule-border)] bg-[var(--bg-paper)] px-3 py-2 text-sm text-[var(--ink-primary)] focus:border-[var(--ink-primary)] focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  <label className="type-kicker mb-1.5 block text-[var(--ink-secondary)]">
                     Ort / Raum
                   </label>
                   <input
@@ -1259,13 +1256,13 @@ export default function ProbeplanTab({
                     value={editLocation}
                     onChange={(e) => setEditLocation(e.target.value)}
                     placeholder="z.B. Proberaum"
-                    className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:border-amber-500 focus:outline-none"
+                    className="w-full border border-[var(--rule-border)] bg-[var(--bg-paper)] px-3 py-2 text-sm text-[var(--ink-primary)] focus:border-[var(--ink-primary)] focus:outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-400">
+                <label className="type-kicker mb-1.5 block text-[var(--ink-secondary)]">
                   Freitext-Zusatzinformationen zum Termin
                 </label>
                 <textarea
@@ -1273,23 +1270,23 @@ export default function ProbeplanTab({
                   value={editInfo}
                   onChange={(e) => setEditInfo(e.target.value)}
                   placeholder="Beliebige Zusatzinformationen für diesen Termin..."
-                  className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:border-amber-500 focus:outline-none"
+                  className="w-full border border-[var(--rule-border)] bg-[var(--bg-paper)] px-3 py-2 text-sm text-[var(--ink-primary)] focus:border-[var(--ink-primary)] focus:outline-none"
                 />
               </div>
 
-              <div className="flex justify-end gap-3 pt-2">
+              <div className="flex justify-end gap-2 pt-3">
                 <button
                   type="button"
                   onClick={() => setEditingSession(null)}
-                  className="rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 cursor-pointer"
+                  className="type-kicker border border-[var(--rule-border)] bg-[var(--bg-paper)] px-4 py-2.5 text-[var(--ink-secondary)] cursor-pointer"
                 >
-                  Abbrechen
+                  ABBRECHEN
                 </button>
                 <button
                   type="submit"
-                  className="rounded-xl bg-amber-500 px-5 py-2 text-sm font-semibold text-slate-950 hover:bg-amber-400 cursor-pointer"
+                  className="type-kicker bg-[var(--accent)] px-5 py-2.5 text-[var(--accent-ink)] cursor-pointer"
                 >
-                  Speichern
+                  SPEICHERN
                 </button>
               </div>
             </form>
@@ -1299,4 +1296,3 @@ export default function ProbeplanTab({
     </div>
   );
 }
-

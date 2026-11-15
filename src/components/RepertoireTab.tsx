@@ -4,17 +4,9 @@ import React, { useState, useMemo } from "react";
 import {
   Plus,
   Search,
-  Mic,
-  Guitar,
-  Heart,
-  ShieldCheck,
-  Flame,
-  Calendar,
   Edit3,
   Trash2,
   ArrowUpDown,
-  Users,
-  Music2,
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
@@ -40,12 +32,6 @@ const DIFFICULTY_ORDER: Record<string, number> = {
   EASY: 1,
   MEDIUM: 2,
   HARD: 3,
-};
-
-const DIFFICULTY_COLORS: Record<string, string> = {
-  EASY: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
-  MEDIUM: "bg-amber-500/15 text-amber-300 border-amber-500/30",
-  HARD: "bg-rose-500/15 text-rose-300 border-rose-500/30",
 };
 
 export default function RepertoireTab({
@@ -172,7 +158,9 @@ export default function RepertoireTab({
 
   const handleDeletePiece = async (piece: PieceItem) => {
     if (
-      !window.confirm(`Möchtest du „${piece.title}“ wirklich aus dem Repertoire löschen?`)
+      !window.confirm(
+        `Möchtest du „${piece.title}“ wirklich aus dem Repertoire löschen?`
+      )
     ) {
       return;
     }
@@ -308,38 +296,57 @@ export default function RepertoireTab({
   ]);
 
   return (
-    <div className="space-y-6">
-      {/* Top Action & Filter Bar */}
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 shadow-lg backdrop-blur">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="relative flex-1">
-            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Repertoire durchsuchen (Titel, Sänger, Solist, Song-Typ, Notizen)..."
-              className="w-full rounded-xl border border-slate-700/80 bg-slate-950/80 py-2.5 pl-10 pr-4 text-sm text-slate-100 placeholder-slate-500 focus:border-amber-500 focus:outline-none"
-            />
+    /* Asymmetric 12-Column Grid: Columns 1–4 Sticky Filter Rail, Columns 5–12 Score Ledger */
+    <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
+      {/* Left Rail: Columns 1–4 */}
+      <aside className="lg:col-span-4">
+        <div className="sticky top-36 space-y-5 border-t-2 border-[var(--rule-heavy)] bg-[var(--bg-surface)] p-5 border-x border-b border-x-[var(--rule-border)] border-b-[var(--rule-border)]">
+          <div className="flex items-baseline justify-between border-b border-[var(--rule-border)] pb-3">
+            <div>
+              <div className="type-kicker text-[var(--ink-muted)]">
+                KATALOG-STEUERUNG
+              </div>
+              <h2 className="type-section-h2 mt-0.5 text-[var(--ink-primary)]">
+                Repertoire-Filter
+              </h2>
+            </div>
+            <span className="font-mono-tabular text-xs font-semibold text-[var(--ink-secondary)]">
+              {filteredAndSortedPieces.length} / {pieces.length}
+            </span>
           </div>
 
           <button
             type="button"
             onClick={openCreateModal}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-semibold text-slate-950 shadow-md shadow-amber-500/10 transition hover:bg-amber-400 cursor-pointer"
+            className="type-kicker ui-transition flex w-full items-center justify-center gap-2 bg-[var(--accent)] px-4 py-3 text-[var(--accent-ink)] cursor-pointer"
           >
             <Plus className="h-4 w-4" />
-            Neues Stück hinzufügen
+            NEUES STÜCK ANLEGEN
           </button>
-        </div>
 
-        {/* Filter & Sort Controls */}
-        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+          {/* Search */}
           <div>
-            <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-              Sortieren nach
+            <label className="type-kicker mb-1.5 block text-[var(--ink-secondary)]">
+              Volltextsuche
             </label>
-            <div className="flex gap-1">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--ink-muted)]" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Titel, Sänger, Solist, Typ..."
+                className="w-full border border-[var(--rule-border)] bg-[var(--bg-paper)] py-2 pl-9 pr-3 text-sm text-[var(--ink-primary)] placeholder-[var(--ink-muted)] focus:border-[var(--ink-primary)] focus:outline-none"
+              />
+            </div>
+          </div>
+
+          {/* Sort */}
+          <div>
+            <label className="type-kicker mb-1.5 block text-[var(--ink-secondary)]">
+              Sortierkriterium
+            </label>
+            <div className="flex gap-1.5">
               <select
                 value={sortBy}
                 onChange={(e) => {
@@ -353,18 +360,18 @@ export default function RepertoireTab({
                     setSortDir("desc");
                   }
                 }}
-                className="w-full rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-xs text-slate-200 focus:border-amber-500 focus:outline-none"
+                className="w-full border border-[var(--rule-border)] bg-[var(--bg-paper)] px-3 py-2 text-sm text-[var(--ink-primary)] focus:border-[var(--ink-primary)] focus:outline-none"
               >
-                <option value="priority">Proben-Priorität</option>
+                <option value="priority">Proben-Dringlichkeit (Score)</option>
                 <option value="like">Beliebtheit (Favoriten)</option>
                 <option value="practice">Übungsbedarf</option>
                 <option value="confidence">Sicherheit</option>
                 <option value="difficulty">Schwierigkeit</option>
-                <option value="singer">Sänger</option>
-                <option value="soloist">Solist</option>
-                <option value="songType">Song-Typ</option>
+                <option value="singer">Sänger (A–Z)</option>
+                <option value="soloist">Solist (A–Z)</option>
+                <option value="songType">Song-Typ (A–Z)</option>
                 <option value="lastPracticed">Zuletzt geprobt</option>
-                <option value="title">Titel (A–Z)</option>
+                <option value="title">Alphabetisch (Titel)</option>
               </select>
               <button
                 type="button"
@@ -376,356 +383,344 @@ export default function RepertoireTab({
                     ? "Aufsteigend sortiert"
                     : "Absteigend sortiert"
                 }
-                className="inline-flex items-center justify-center rounded-lg border border-slate-700 bg-slate-950 px-2 text-slate-300 hover:border-amber-500 hover:text-amber-400 cursor-pointer"
+                className="font-mono-tabular inline-flex items-center justify-center border border-[var(--rule-border)] bg-[var(--bg-paper)] px-3 text-xs font-semibold text-[var(--ink-primary)] hover:border-[var(--ink-primary)] cursor-pointer"
               >
                 <ArrowUpDown className="h-3.5 w-3.5" />
               </button>
             </div>
           </div>
 
-          <div>
-            <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-              Filter: Sänger
-            </label>
-            <select
-              value={filterSinger}
-              onChange={(e) => setFilterSinger(e.target.value)}
-              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-xs text-slate-200 focus:border-amber-500 focus:outline-none"
-            >
-              <option value="">Alle Sänger</option>
-              {suggestions.singers.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
+          {/* Filter Dropdowns */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1">
+            <div>
+              <label className="type-kicker mb-1 block text-[var(--ink-secondary)]">
+                Sänger
+              </label>
+              <select
+                value={filterSinger}
+                onChange={(e) => setFilterSinger(e.target.value)}
+                className="w-full border border-[var(--rule-border)] bg-[var(--bg-paper)] px-3 py-2 text-sm text-[var(--ink-primary)] focus:border-[var(--ink-primary)] focus:outline-none"
+              >
+                <option value="">Alle Sänger</option>
+                {suggestions.singers.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="type-kicker mb-1 block text-[var(--ink-secondary)]">
+                Solist
+              </label>
+              <select
+                value={filterSoloist}
+                onChange={(e) => setFilterSoloist(e.target.value)}
+                className="w-full border border-[var(--rule-border)] bg-[var(--bg-paper)] px-3 py-2 text-sm text-[var(--ink-primary)] focus:border-[var(--ink-primary)] focus:outline-none"
+              >
+                <option value="">Alle Solisten</option>
+                {suggestions.soloists.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="type-kicker mb-1 block text-[var(--ink-secondary)]">
+                Song-Typ
+              </label>
+              <select
+                value={filterSongType}
+                onChange={(e) => setFilterSongType(e.target.value)}
+                className="w-full border border-[var(--rule-border)] bg-[var(--bg-paper)] px-3 py-2 text-sm text-[var(--ink-primary)] focus:border-[var(--ink-primary)] focus:outline-none"
+              >
+                <option value="">Alle Song-Typen</option>
+                {suggestions.songTypes.map((st) => (
+                  <option key={st} value={st}>
+                    {st}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="type-kicker mb-1 block text-[var(--ink-secondary)]">
+                Schwierigkeitsgrad
+              </label>
+              <select
+                value={filterDifficulty}
+                onChange={(e) => setFilterDifficulty(e.target.value)}
+                className="w-full border border-[var(--rule-border)] bg-[var(--bg-paper)] px-3 py-2 text-sm text-[var(--ink-primary)] focus:border-[var(--ink-primary)] focus:outline-none"
+              >
+                <option value="">Alle Stufen</option>
+                <option value="EASY">Leicht</option>
+                <option value="MEDIUM">Mittel</option>
+                <option value="HARD">Schwer</option>
+              </select>
+            </div>
           </div>
 
-          <div>
-            <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-              Filter: Solist
-            </label>
-            <select
-              value={filterSoloist}
-              onChange={(e) => setFilterSoloist(e.target.value)}
-              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-xs text-slate-200 focus:border-amber-500 focus:outline-none"
-            >
-              <option value="">Alle Solisten</option>
-              {suggestions.soloists.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-              Filter: Song-Typ
-            </label>
-            <select
-              value={filterSongType}
-              onChange={(e) => setFilterSongType(e.target.value)}
-              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-xs text-slate-200 focus:border-amber-500 focus:outline-none"
-            >
-              <option value="">Alle Song-Typen</option>
-              {suggestions.songTypes.map((st) => (
-                <option key={st} value={st}>
-                  {st}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-              Filter: Schwierigkeit
-            </label>
-            <select
-              value={filterDifficulty}
-              onChange={(e) => setFilterDifficulty(e.target.value)}
-              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-xs text-slate-200 focus:border-amber-500 focus:outline-none"
-            >
-              <option value="">Alle Stufen</option>
-              <option value="EASY">Leicht</option>
-              <option value="MEDIUM">Mittel</option>
-              <option value="HARD">Schwer</option>
-            </select>
-          </div>
-
-          <div className="flex items-end">
-            <button
-              type="button"
-              onClick={() => {
-                setSearch("");
-                setFilterSinger("");
-                setFilterSoloist("");
-                setFilterSongType("");
-                setFilterDifficulty("");
-              }}
-              className="w-full rounded-lg border border-slate-700/80 bg-slate-800/70 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800 cursor-pointer"
-            >
-              Filter zurücksetzen ({filteredAndSortedPieces.length}/
-              {pieces.length})
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Piece List */}
-      {filteredAndSortedPieces.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-900/40 p-12 text-center">
-          <Music2 className="mx-auto h-10 w-10 text-slate-600" />
-          <h3 className="mt-3 text-base font-semibold text-slate-200">
-            Keine Stücke gefunden
-          </h3>
-          <p className="mt-1 text-sm text-slate-400">
-            Füge das erste Stück zum Repertoire hinzu oder passe deine
-            Filterkriterien an.
-          </p>
           <button
             type="button"
-            onClick={openCreateModal}
-            className="mt-4 inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-amber-400 cursor-pointer"
+            onClick={() => {
+              setSearch("");
+              setFilterSinger("");
+              setFilterSoloist("");
+              setFilterSongType("");
+              setFilterDifficulty("");
+            }}
+            className="type-kicker w-full border border-[var(--rule-border)] bg-[var(--bg-recessed)] py-2 text-center text-[var(--ink-secondary)] hover:border-[var(--ink-primary)] hover:text-[var(--ink-primary)] cursor-pointer"
           >
-            <Plus className="h-4 w-4" /> Stück hinzufügen
+            FILTER ZURÜCKSETZEN
           </button>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          {filteredAndSortedPieces.map((piece) => {
-            const myVote = piece.myVote;
-            const isExpanded = expandedVotesPieceId === piece.id;
+      </aside>
 
-            return (
-              <div
-                key={piece.id}
-                className="flex flex-col justify-between rounded-2xl border border-slate-800/90 bg-slate-900/75 p-5 shadow-md transition hover:border-slate-700"
-              >
-                <div>
-                  {/* Header Row */}
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-lg font-bold text-slate-100">
-                          {piece.title}
-                        </h3>
-                        <span
-                          className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${
-                            DIFFICULTY_COLORS[piece.difficulty] ||
-                            DIFFICULTY_COLORS.MEDIUM
-                          }`}
-                        >
-                          {DIFFICULTY_LABELS[piece.difficulty] || "Mittel"}
-                        </span>
-                        {piece.songType && (
-                          <span className="rounded-full border border-indigo-500/30 bg-indigo-500/15 px-2.5 py-0.5 text-[11px] font-medium text-indigo-300">
-                            {piece.songType}
+      {/* Right Main Ledger: Columns 5–12 */}
+      <section className="lg:col-span-8">
+        {filteredAndSortedPieces.length === 0 ? (
+          <div className="border-t-2 border-[var(--rule-heavy)] bg-[var(--bg-surface)] p-12 text-center border-x border-b border-x-[var(--rule-border)] border-b-[var(--rule-border)]">
+            <div className="type-kicker text-[var(--ink-muted)]">
+              VERZEICHNIS LEER
+            </div>
+            <h3 className="type-section-h2 mt-2 text-[var(--ink-primary)]">
+              Keine Stücke für diese Auswahl
+            </h3>
+            <p className="mt-1 text-sm text-[var(--ink-secondary)]">
+              Lege ein neues Stück an oder setze die aktiven Filter in der
+              linken Spalte zurück.
+            </p>
+          </div>
+        ) : (
+          <div className="border-t-2 border-[var(--rule-heavy)] bg-[var(--bg-surface)] border-x border-b border-x-[var(--rule-border)] border-b-[var(--rule-border)]">
+            {filteredAndSortedPieces.map((piece, idx) => {
+              const myVote = piece.myVote;
+              const isExpanded = expandedVotesPieceId === piece.id;
+              const staggerIdx = Math.min(idx, 8);
+
+              return (
+                <article
+                  key={piece.id}
+                  style={
+                    { "--stagger-index": staggerIdx } as React.CSSProperties
+                  }
+                  className="stagger-item border-b border-[var(--rule-border)] last:border-b-0 p-5 sm:p-6"
+                >
+                  {/* Top Row: Index Number, Title, Tags, Actions */}
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex items-baseline gap-3">
+                      <span className="font-mono-tabular text-xs font-semibold text-[var(--ink-muted)]">
+                        {String(idx + 1).padStart(2, "0")}
+                      </span>
+                      <div>
+                        <div className="flex flex-wrap items-baseline gap-2.5">
+                          <h3 className="type-piece-h3 text-[var(--ink-primary)]">
+                            {piece.title}
+                          </h3>
+                          {piece.artist && (
+                            <span className="text-sm text-[var(--ink-secondary)]">
+                              — {piece.artist}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                          <span className="type-kicker border border-[var(--ink-primary)] bg-[var(--bg-recessed)] px-2 py-0.5 text-[var(--ink-primary)]">
+                            {DIFFICULTY_LABELS[piece.difficulty] || "Mittel"}
                           </span>
-                        )}
+                          {piece.songType && (
+                            <span className="type-kicker border border-[var(--rule-border)] bg-[var(--bg-paper)] px-2 py-0.5 text-[var(--ink-secondary)]">
+                              TYP: {piece.songType}
+                            </span>
+                          )}
+                          <span className="type-kicker border border-[var(--rule-border)] bg-[var(--bg-paper)] px-2 py-0.5 text-[var(--ink-secondary)]">
+                            PRIO-SCORE: {piece.priorityScore.toFixed(1)}
+                          </span>
+                        </div>
                       </div>
-                      {piece.artist && (
-                        <p className="mt-0.5 text-xs text-slate-400">
-                          {piece.artist}
-                        </p>
-                      )}
                     </div>
 
-                    <div className="flex items-center gap-1.5">
-                      <span
-                        title="Berechneter Proben-Prioritätswert"
-                        className="rounded-lg bg-slate-800 px-2.5 py-1 text-xs font-semibold text-amber-400"
-                      >
-                        Prio {piece.priorityScore.toFixed(1)}
-                      </span>
+                    <div className="flex items-center gap-1.5 self-end sm:self-start">
                       <button
                         type="button"
                         onClick={() => openEditModal(piece)}
-                        className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-slate-200 cursor-pointer"
-                        title="Stück bearbeiten"
+                        className="type-kicker inline-flex items-center gap-1 border border-[var(--rule-border)] bg-[var(--bg-paper)] px-2.5 py-1.5 text-[var(--ink-secondary)] hover:border-[var(--ink-primary)] hover:text-[var(--ink-primary)] cursor-pointer"
                       >
-                        <Edit3 className="h-4 w-4" />
+                        <Edit3 className="h-3.5 w-3.5" /> BEARBEITEN
                       </button>
                       <button
                         type="button"
                         onClick={() => handleDeletePiece(piece)}
-                        className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-500/15 hover:text-rose-400 cursor-pointer"
+                        className="border border-[var(--rule-border)] bg-[var(--bg-paper)] p-1.5 text-[var(--ink-secondary)] hover:border-[var(--accent)] hover:text-[var(--accent)] cursor-pointer"
                         title="Stück löschen"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3.5 w-3.5" />
                       </button>
                     </div>
                   </div>
 
-                  {/* Singers, Soloists & Last Practiced */}
-                  <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-300">
-                    <div className="inline-flex items-center gap-1.5 rounded-lg bg-slate-950/70 px-2.5 py-1 border border-slate-800">
-                      <Mic className="h-3.5 w-3.5 text-amber-400" />
-                      <span className="text-slate-400">Sänger:</span>
-                      <span className="font-medium text-slate-200">
+                  {/* Metadata Grid: Singers, Soloists, Last Practiced */}
+                  <div className="mt-4 grid grid-cols-1 gap-px border border-[var(--rule-border)] bg-[var(--rule-border)] sm:grid-cols-3">
+                    <div className="bg-[var(--bg-paper)] px-3 py-2">
+                      <div className="type-kicker text-[var(--ink-muted)]">
+                        SÄNGER
+                      </div>
+                      <div className="mt-0.5 text-sm font-medium text-[var(--ink-primary)]">
                         {piece.singers || "Instrumental / Keine"}
-                      </span>
+                      </div>
                     </div>
-
-                    <div className="inline-flex items-center gap-1.5 rounded-lg bg-slate-950/70 px-2.5 py-1 border border-slate-800">
-                      <Guitar className="h-3.5 w-3.5 text-cyan-400" />
-                      <span className="text-slate-400">Solist:</span>
-                      <span className="font-medium text-slate-200">
-                        {piece.soloists || "–"}
-                      </span>
+                    <div className="bg-[var(--bg-paper)] px-3 py-2">
+                      <div className="type-kicker text-[var(--ink-muted)]">
+                        SOLIST
+                      </div>
+                      <div className="mt-0.5 text-sm font-medium text-[var(--ink-primary)]">
+                        {piece.soloists || "—"}
+                      </div>
                     </div>
-
-                    <div className="inline-flex items-center gap-1.5 rounded-lg bg-slate-950/70 px-2.5 py-1 border border-slate-800">
-                      <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                      <span className="text-slate-400">Zuletzt geprobt:</span>
-                      <span className="font-medium text-slate-200">
+                    <div className="bg-[var(--bg-paper)] px-3 py-2">
+                      <div className="type-kicker text-[var(--ink-muted)]">
+                        ZULETZT GEPROBT
+                      </div>
+                      <div className="font-mono-tabular mt-0.5 text-sm font-medium text-[var(--ink-primary)]">
                         {piece.lastPracticedAt
                           ? new Date(piece.lastPracticedAt).toLocaleDateString(
                               "de-DE"
                             )
                           : "Noch nie"}
-                      </span>
+                      </div>
                     </div>
                   </div>
 
                   {piece.notes && (
-                    <p className="mt-2.5 rounded-lg bg-slate-950/50 px-3 py-1.5 text-xs text-slate-300 border border-slate-800/60">
+                    <div className="mt-3 border-l-2 border-[var(--ink-primary)] pl-3 text-sm text-[var(--ink-secondary)]">
                       {piece.notes}
-                    </p>
+                    </div>
                   )}
 
-                  {/* Band Averages */}
-                  <div className="mt-4 grid grid-cols-3 gap-2 rounded-xl bg-slate-950/80 p-3 border border-slate-800/80">
-                    <div className="flex items-center gap-2">
-                      <Heart className="h-4 w-4 text-amber-400 shrink-0" />
-                      <div>
-                        <div className="text-[11px] text-slate-400">
-                          Ø Beliebtheit
+                  {/* Ensemble Averages vs Personal 1–5 Voting */}
+                  <div className="mt-4 grid grid-cols-1 gap-4 border-t border-[var(--rule-border)] pt-4 md:grid-cols-12">
+                    {/* Band Averages (Cols 1-4) */}
+                    <div className="flex flex-col justify-between border border-[var(--rule-border)] bg-[var(--bg-recessed)] p-3 md:col-span-4">
+                      <div className="flex items-center justify-between">
+                        <span className="type-kicker text-[var(--ink-secondary)]">
+                          BAND-DURCHSCHNITT
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setExpandedVotesPieceId(
+                              isExpanded ? null : piece.id
+                            )
+                          }
+                          className="type-kicker inline-flex items-center gap-0.5 text-[var(--ink-primary)] underline cursor-pointer"
+                        >
+                          {piece.voteCount} STIMMEN
+                          {isExpanded ? (
+                            <ChevronUp className="h-3 w-3" />
+                          ) : (
+                            <ChevronDown className="h-3 w-3" />
+                          )}
+                        </button>
+                      </div>
+
+                      <div className="font-mono-tabular mt-2 grid grid-cols-3 gap-2 text-center">
+                        <div className="bg-[var(--bg-surface)] p-1.5 border border-[var(--rule-border)]">
+                          <div className="text-[10px] text-[var(--ink-muted)]">
+                            GEFÄLLT
+                          </div>
+                          <div className="text-sm font-bold text-[var(--ink-primary)]">
+                            {piece.avgLike.toFixed(1)}
+                          </div>
                         </div>
-                        <div className="text-sm font-bold text-slate-100">
-                          {piece.avgLike.toFixed(1)}{" "}
-                          <span className="text-xs font-normal text-slate-500">
-                            / 5
-                          </span>
+                        <div className="bg-[var(--bg-surface)] p-1.5 border border-[var(--rule-border)]">
+                          <div className="text-[10px] text-[var(--ink-muted)]">
+                            SICHER
+                          </div>
+                          <div className="text-sm font-bold text-[var(--ink-primary)]">
+                            {piece.avgConfidence.toFixed(1)}
+                          </div>
+                        </div>
+                        <div className="bg-[var(--bg-surface)] p-1.5 border border-[var(--rule-border)]">
+                          <div className="text-[10px] text-[var(--ink-muted)]">
+                            ÜBUNG
+                          </div>
+                          <div className="text-sm font-bold text-[var(--ink-primary)]">
+                            {piece.avgPracticeNeeded.toFixed(1)}
+                          </div>
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <ShieldCheck className="h-4 w-4 text-emerald-400 shrink-0" />
-                      <div>
-                        <div className="text-[11px] text-slate-400">
-                          Ø Sicherheit
-                        </div>
-                        <div className="text-sm font-bold text-slate-100">
-                          {piece.avgConfidence.toFixed(1)}{" "}
-                          <span className="text-xs font-normal text-slate-500">
-                            / 5
-                          </span>
-                        </div>
+                    {/* Player's Own 1–5 Controls (Cols 5-12) */}
+                    <div className="md:col-span-8">
+                      <div className="mb-2 flex items-center justify-between">
+                        <span className="type-kicker text-[var(--ink-secondary)]">
+                          {currentUser
+                            ? `MEINE ABSTIMMUNG (${currentUser.name})`
+                            : "MEINE ABSTIMMUNG (BITTE OBEN NAMEN EINGEBEN)"}
+                        </span>
+                        <span className="font-mono-tabular text-[11px] text-[var(--ink-muted)]">
+                          Skala 1 (niedrig) bis 5 (hoch)
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                        <ScoreSelector
+                          label="Gefällt mir"
+                          value={myVote?.likeScore ?? 0}
+                          onChange={(val) =>
+                            handleVote(piece, "likeScore", val)
+                          }
+                          disabled={savingVoteId === piece.id}
+                        />
+                        <ScoreSelector
+                          label="Sicherheit"
+                          value={myVote?.confidenceScore ?? 0}
+                          onChange={(val) =>
+                            handleVote(piece, "confidenceScore", val)
+                          }
+                          disabled={savingVoteId === piece.id}
+                        />
+                        <ScoreSelector
+                          label="Übungsbedarf"
+                          value={myVote?.practiceNeededScore ?? 0}
+                          onChange={(val) =>
+                            handleVote(piece, "practiceNeededScore", val)
+                          }
+                          disabled={savingVoteId === piece.id}
+                        />
                       </div>
                     </div>
-
-                    <div className="flex items-center gap-2">
-                      <Flame className="h-4 w-4 text-rose-400 shrink-0" />
-                      <div>
-                        <div className="text-[11px] text-slate-400">
-                          Ø Übungsbedarf
-                        </div>
-                        <div className="text-sm font-bold text-slate-100">
-                          {piece.avgPracticeNeeded.toFixed(1)}{" "}
-                          <span className="text-xs font-normal text-slate-500">
-                            / 5
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Personal Voting Section */}
-                <div className="mt-4 border-t border-slate-800/80 pt-3">
-                  <div className="mb-2 flex items-center justify-between">
-                    <span className="text-xs font-semibold text-slate-300">
-                      {currentUser
-                        ? `Deine Bewertung (${currentUser.name}):`
-                        : "Deine Bewertung (bitte oben Namen eingeben):"}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setExpandedVotesPieceId(isExpanded ? null : piece.id)
-                      }
-                      className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-amber-400 cursor-pointer"
-                    >
-                      <Users className="h-3.5 w-3.5" />
-                      {piece.voteCount}{" "}
-                      {piece.voteCount === 1 ? "Stimme" : "Stimmen"}
-                      {isExpanded ? (
-                        <ChevronUp className="h-3.5 w-3.5" />
-                      ) : (
-                        <ChevronDown className="h-3.5 w-3.5" />
-                      )}
-                    </button>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                    <ScoreSelector
-                      label="Gefällt mir"
-                      value={myVote?.likeScore ?? 0}
-                      onChange={(val) => handleVote(piece, "likeScore", val)}
-                      colorScheme="amber"
-                      disabled={savingVoteId === piece.id}
-                    />
-                    <ScoreSelector
-                      label="Sicherheit"
-                      value={myVote?.confidenceScore ?? 0}
-                      onChange={(val) =>
-                        handleVote(piece, "confidenceScore", val)
-                      }
-                      colorScheme="emerald"
-                      disabled={savingVoteId === piece.id}
-                    />
-                    <ScoreSelector
-                      label="Übungsbedarf"
-                      value={myVote?.practiceNeededScore ?? 0}
-                      onChange={(val) =>
-                        handleVote(piece, "practiceNeededScore", val)
-                      }
-                      colorScheme="rose"
-                      disabled={savingVoteId === piece.id}
-                    />
-                  </div>
-
-                  {/* Expanded Individual Votes */}
+                  {/* Expanded Player Votes Table */}
                   {isExpanded && (
-                    <div className="mt-3 rounded-xl border border-slate-800 bg-slate-950/90 p-3">
-                      <div className="mb-2 text-xs font-semibold text-slate-400">
-                        Einzelbewertungen der Spieler:
+                    <div className="mt-4 border border-[var(--ink-primary)] bg-[var(--bg-paper)] p-3">
+                      <div className="type-kicker mb-2 text-[var(--ink-secondary)]">
+                        EINZELBEWERTUNGEN DER SPIELER
                       </div>
                       {piece.votes.length === 0 ? (
-                        <p className="text-xs text-slate-500">
-                          Noch keine Bewertungen abgegeben.
+                        <p className="text-xs text-[var(--ink-muted)]">
+                          Noch keine Einzelstimmen vorhanden.
                         </p>
                       ) : (
-                        <div className="space-y-1.5">
+                        <div className="divide-y divide-[var(--rule-border)]">
                           {piece.votes.map((v) => (
                             <div
                               key={v.userId}
-                              className="flex items-center justify-between text-xs text-slate-300"
+                              className="flex items-center justify-between py-1.5 text-xs"
                             >
-                              <span className="font-medium text-slate-200">
+                              <span className="font-semibold text-[var(--ink-primary)]">
                                 {v.userName}
                               </span>
-                              <div className="flex items-center gap-3">
-                                <span className="text-amber-300">
-                                  ♥ {v.likeScore}/5
-                                </span>
-                                <span className="text-emerald-300">
-                                  Sicherheit {v.confidenceScore}/5
-                                </span>
-                                <span className="text-rose-300">
-                                  Übung {v.practiceNeededScore}/5
+                              <div className="font-mono-tabular flex items-center gap-4 text-[var(--ink-secondary)]">
+                                <span>Gefällt: {v.likeScore}/5</span>
+                                <span>Sicherheit: {v.confidenceScore}/5</span>
+                                <span>
+                                  Übungsbedarf: {v.practiceNeededScore}/5
                                 </span>
                               </div>
                             </div>
@@ -734,25 +729,29 @@ export default function RepertoireTab({
                       )}
                     </div>
                   )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </section>
 
       {/* Modal: Create / Edit Piece */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
-          <div className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
-            <h2 className="text-lg font-bold text-slate-100">
-              {editingPiece ? "Stück bearbeiten" : "Neues Stück zum Repertoire"}
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="max-h-[90vh] w-full max-w-xl overflow-y-auto border-2 border-[var(--rule-heavy)] bg-[var(--bg-surface)] p-6">
+            <div className="type-kicker text-[var(--accent)]">
+              REPERTOIRE-EINTRAG
+            </div>
+            <h2 className="type-section-h2 mt-1 text-[var(--ink-primary)]">
+              {editingPiece ? "Stück bearbeiten" : "Neues Stück aufnehmen"}
             </h2>
-            <form onSubmit={handleSavePiece} className="mt-4 space-y-4">
+
+            <form onSubmit={handleSavePiece} className="mt-5 space-y-4">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-400">
-                    Titel *
+                  <label className="type-kicker mb-1.5 block text-[var(--ink-secondary)]">
+                    Titel des Stücks *
                   </label>
                   <input
                     type="text"
@@ -760,11 +759,11 @@ export default function RepertoireTab({
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="z.B. Valerie"
-                    className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:border-amber-500 focus:outline-none"
+                    className="w-full border border-[var(--rule-border)] bg-[var(--bg-paper)] px-3 py-2 text-sm text-[var(--ink-primary)] focus:border-[var(--ink-primary)] focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  <label className="type-kicker mb-1.5 block text-[var(--ink-secondary)]">
                     Interpret / Komponist
                   </label>
                   <input
@@ -772,14 +771,14 @@ export default function RepertoireTab({
                     value={artist}
                     onChange={(e) => setArtist(e.target.value)}
                     placeholder="z.B. Amy Winehouse"
-                    className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:border-amber-500 focus:outline-none"
+                    className="w-full border border-[var(--rule-border)] bg-[var(--bg-paper)] px-3 py-2 text-sm text-[var(--ink-primary)] focus:border-[var(--ink-primary)] focus:outline-none"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  <label className="type-kicker mb-1.5 block text-[var(--ink-secondary)]">
                     Schwierigkeit
                   </label>
                   <select
@@ -789,7 +788,7 @@ export default function RepertoireTab({
                         e.target.value as "EASY" | "MEDIUM" | "HARD"
                       )
                     }
-                    className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:border-amber-500 focus:outline-none"
+                    className="w-full border border-[var(--rule-border)] bg-[var(--bg-paper)] px-3 py-2 text-sm text-[var(--ink-primary)] focus:border-[var(--ink-primary)] focus:outline-none"
                   >
                     <option value="EASY">Leicht</option>
                     <option value="MEDIUM">Mittel</option>
@@ -799,7 +798,7 @@ export default function RepertoireTab({
 
                 <TagInput
                   label="Song-Typ / Stil"
-                  placeholder="z.B. Funk, Ballade, Rock, Opener..."
+                  placeholder="z.B. Soul, Funk, Ballade, Opener..."
                   value={songType}
                   onChange={setSongType}
                   suggestions={suggestions.songTypes}
@@ -808,76 +807,73 @@ export default function RepertoireTab({
               </div>
 
               <TagInput
-                label="Sänger (Mehrfachauswahl möglich)"
-                placeholder="Name eingeben + Enter (oder Vorschlag anklicken)"
+                label="Sänger (Mehrfachnennung möglich)"
+                placeholder="Name eingeben + Enter (oder Vorschlag wählen)"
                 value={singers}
                 onChange={setSingers}
                 suggestions={suggestions.singers}
               />
 
               <TagInput
-                label="Solist (Mehrfachauswahl möglich)"
-                placeholder="Name/Instrument eingeben + Enter"
+                label="Solist (Mehrfachnennung möglich)"
+                placeholder="Name / Instrument eingeben + Enter"
                 value={soloists}
                 onChange={setSoloists}
                 suggestions={suggestions.soloists}
               />
 
               <div>
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-400">
+                <label className="type-kicker mb-1.5 block text-[var(--ink-secondary)]">
                   Notizen / Tonart / Ablauf
                 </label>
                 <textarea
                   rows={2}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Optionale Hinweise (z.B. Tonart Eb-Dur, kurzes Intro, Tempo 120 BPM)..."
-                  className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:border-amber-500 focus:outline-none"
+                  placeholder="Optionale Hinweise (Tonart, Tempo, Einsätze)..."
+                  className="w-full border border-[var(--rule-border)] bg-[var(--bg-paper)] px-3 py-2 text-sm text-[var(--ink-primary)] focus:border-[var(--ink-primary)] focus:outline-none"
                 />
               </div>
 
               {!editingPiece && currentUser && (
-                <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-3.5">
-                  <div className="mb-2 text-xs font-semibold text-slate-300">
-                    Deine Start-Bewertung ({currentUser.name}):
+                <div className="border border-[var(--rule-border)] bg-[var(--bg-recessed)] p-3.5">
+                  <div className="type-kicker mb-2 text-[var(--ink-secondary)]">
+                    START-BEWERTUNG ({currentUser.name})
                   </div>
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                     <ScoreSelector
                       label="Gefällt mir"
                       value={initLike}
                       onChange={setInitLike}
-                      colorScheme="amber"
                     />
                     <ScoreSelector
                       label="Sicherheit"
                       value={initConfidence}
                       onChange={setInitConfidence}
-                      colorScheme="emerald"
                     />
                     <ScoreSelector
                       label="Übungsbedarf"
                       value={initPractice}
                       onChange={setInitPractice}
-                      colorScheme="rose"
                     />
                   </div>
                 </div>
               )}
 
-              <div className="flex items-center justify-end gap-3 pt-2">
+              <div className="flex items-center justify-end gap-2 pt-3">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="rounded-xl border border-slate-700 px-4 py-2 text-sm font-medium text-slate-300 hover:bg-slate-800 cursor-pointer"
+                  className="type-kicker border border-[var(--rule-border)] bg-[var(--bg-paper)] px-4 py-2.5 text-[var(--ink-secondary)] hover:border-[var(--ink-primary)] cursor-pointer"
                 >
-                  Abbrechen
+                  ABBRECHEN
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="rounded-xl bg-amber-500 px-5 py-2 text-sm font-semibold text-slate-950 hover:bg-amber-400 disabled:opacity-50 cursor-pointer"
+                  className="type-kicker bg-[var(--accent)] px-5 py-2.5 text-[var(--accent-ink)] disabled:opacity-50 cursor-pointer"
                 >
-                  {submitting ? "Speichert..." : "Speichern"}
+                  {submitting ? "SPEICHERT..." : "STÜCK SPEICHERN"}
                 </button>
               </div>
             </form>
@@ -887,4 +883,3 @@ export default function RepertoireTab({
     </div>
   );
 }
-

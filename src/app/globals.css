@@ -1,13 +1,125 @@
 @import "tailwindcss";
 
 :root {
-  color-scheme: dark;
+  /* Color Token System — Conservatory Score Ledger (Zero Gradients) */
+  --bg-paper: #F6F3EC;
+  --bg-surface: #FDFBF7;
+  --bg-recessed: #EBE5D8;
+  --ink-primary: #141311;
+  --ink-secondary: #57534C;
+  --ink-muted: #857F75;
+  --rule-border: #D6CFC1;
+  --rule-heavy: #141311;
+
+  /* Single-Role Accent: Conductor's Vermilion Pencil */
+  --accent: #C83E2B;
+  --accent-ink: #FDFBF7;
+
+  /* Motion Tokens */
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-entrance: 420ms;
+  --dur-ui: 180ms;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
-  background-color: #020617;
-  color: #f8fafc;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    sans-serif;
+  background-color: var(--bg-paper);
+  color: var(--ink-primary);
+  font-family: var(--font-sans), sans-serif;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  letter-spacing: 0em;
+  margin: 0;
 }
 
+/* Named Typography Spec */
+.font-display {
+  font-family: var(--font-display), Georgia, serif;
+}
+
+.font-sans-ui {
+  font-family: var(--font-sans), sans-serif;
+}
+
+.font-mono-tabular {
+  font-family: var(--font-mono), monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.type-masthead {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: clamp(1.65rem, 2.6vw, 2.35rem);
+  line-height: 1.06;
+  letter-spacing: -0.025em;
+  font-weight: 600;
+}
+
+.type-section-h2 {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: clamp(1.25rem, 1.8vw, 1.5rem);
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  font-weight: 600;
+}
+
+.type-piece-h3 {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.15rem;
+  line-height: 1.22;
+  letter-spacing: -0.01em;
+  font-weight: 600;
+}
+
+.type-kicker {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.72rem;
+  line-height: 1.3;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Orchestrated Entrance Motion */
+@keyframes ledgerFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stagger-item {
+  opacity: 0;
+  animation: ledgerFadeUp var(--dur-entrance) var(--ease-out-quint) forwards;
+  animation-delay: calc(var(--stagger-index, 0) * 65ms);
+}
+
+.ui-transition {
+  transition:
+    background-color var(--dur-ui) var(--ease-out-quint),
+    border-color var(--dur-ui) var(--ease-out-quint),
+    color var(--dur-ui) var(--ease-out-quint),
+    transform var(--dur-ui) var(--ease-out-quint);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stagger-item {
+    opacity: 1 !important;
+    transform: none !important;
+    animation: none !important;
+  }
+  .ui-transition,
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

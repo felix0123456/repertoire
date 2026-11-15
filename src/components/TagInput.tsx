@@ -62,7 +62,7 @@ export default function TagInput({
 
   return (
     <div className="space-y-1.5">
-      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
+      <label className="type-kicker block text-[var(--ink-secondary)]">
         {label}
       </label>
 
@@ -75,14 +75,14 @@ export default function TagInput({
             onFocus={() => setFocused(true)}
             onBlur={() => setTimeout(() => setFocused(false), 180)}
             placeholder={placeholder}
-            className="w-full rounded-lg border border-slate-700 bg-slate-900/90 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-amber-500 focus:outline-none"
+            className="ui-transition w-full border border-[var(--rule-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--ink-primary)] placeholder-[var(--ink-muted)] focus:border-[var(--ink-primary)] focus:outline-none"
           />
           {focused && suggestions.length > 0 && (
-            <div className="absolute z-20 mt-1 max-h-40 w-full overflow-y-auto rounded-lg border border-slate-700 bg-slate-900 p-1.5 shadow-xl">
-              <div className="px-2 py-1 text-[11px] font-medium text-slate-400">
+            <div className="absolute z-20 mt-1 max-h-40 w-full overflow-y-auto border border-[var(--ink-primary)] bg-[var(--bg-surface)] p-2">
+              <div className="type-kicker mb-1.5 text-[var(--ink-muted)]">
                 Vorhandene Einträge:
               </div>
-              <div className="flex flex-wrap gap-1 p-1">
+              <div className="flex flex-wrap gap-1.5">
                 {suggestions.map((s) => (
                   <button
                     key={s}
@@ -92,7 +92,7 @@ export default function TagInput({
                       onChange(s);
                       setFocused(false);
                     }}
-                    className="rounded-md bg-slate-800 px-2.5 py-1 text-xs text-slate-200 hover:bg-amber-500/20 hover:text-amber-300"
+                    className="ui-transition border border-[var(--rule-border)] bg-[var(--bg-paper)] px-2.5 py-1 text-xs font-medium text-[var(--ink-primary)] hover:border-[var(--accent)] hover:text-[var(--accent)] cursor-pointer"
                   >
                     {s}
                   </button>
@@ -102,19 +102,19 @@ export default function TagInput({
           )}
         </div>
       ) : (
-        <div className="rounded-lg border border-slate-700 bg-slate-900/90 p-2 focus-within:border-amber-500">
+        <div className="border border-[var(--rule-border)] bg-[var(--bg-surface)] p-2.5 focus-within:border-[var(--ink-primary)]">
           {tags.length > 0 && (
             <div className="mb-2 flex flex-wrap gap-1.5">
               {tags.map((tag) => (
                 <span
                   key={tag}
-                  className="inline-flex items-center gap-1 rounded-md bg-amber-500/15 px-2.5 py-1 text-xs font-medium text-amber-300 border border-amber-500/30"
+                  className="inline-flex items-center gap-1.5 border border-[var(--ink-primary)] bg-[var(--bg-recessed)] px-2.5 py-0.5 text-xs font-medium text-[var(--ink-primary)]"
                 >
                   {tag}
                   <button
                     type="button"
                     onClick={() => removeTag(tag)}
-                    className="text-amber-400/70 hover:text-amber-200"
+                    className="text-[var(--ink-secondary)] hover:text-[var(--accent)] cursor-pointer"
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -142,13 +142,13 @@ export default function TagInput({
                 }
               }}
               placeholder={placeholder}
-              className="flex-1 bg-transparent text-sm text-slate-100 placeholder-slate-500 focus:outline-none"
+              className="flex-1 bg-transparent text-sm text-[var(--ink-primary)] placeholder-[var(--ink-muted)] focus:outline-none"
             />
             {inputVal.trim() && (
               <button
                 type="button"
                 onClick={() => addTag(inputVal)}
-                className="inline-flex items-center gap-1 rounded bg-amber-500/20 px-2 py-1 text-xs font-medium text-amber-300 hover:bg-amber-500/30"
+                className="inline-flex items-center gap-1 bg-[var(--accent)] px-2.5 py-1 text-xs font-semibold text-[var(--accent-ink)] cursor-pointer"
               >
                 <Plus className="h-3 w-3" /> Hinzufügen
               </button>
@@ -157,11 +157,11 @@ export default function TagInput({
 
           {(focused || filteredSuggestions.length > 0) &&
             filteredSuggestions.length > 0 && (
-              <div className="mt-2 border-t border-slate-800 pt-2">
-                <span className="mr-2 text-[11px] text-slate-400">
-                  Vorschläge:
+              <div className="mt-2.5 border-t border-[var(--rule-border)] pt-2">
+                <span className="type-kicker text-[var(--ink-muted)]">
+                  Vorschläge aus Repertoire:
                 </span>
-                <div className="mt-1 flex flex-wrap gap-1">
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
                   {filteredSuggestions.map((s) => (
                     <button
                       key={s}
@@ -170,7 +170,7 @@ export default function TagInput({
                         e.preventDefault();
                         addTag(s);
                       }}
-                      className="rounded bg-slate-800 px-2 py-0.5 text-xs text-slate-300 hover:bg-amber-500/20 hover:text-amber-300"
+                      className="ui-transition border border-[var(--rule-border)] bg-[var(--bg-paper)] px-2 py-0.5 text-xs text-[var(--ink-secondary)] hover:border-[var(--ink-primary)] hover:text-[var(--ink-primary)] cursor-pointer"
                     >
                       + {s}
                     </button>
@@ -183,4 +183,3 @@ export default function TagInput({
     </div>
   );
 }
-

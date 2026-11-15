@@ -1,17 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback, useRef } from "react";
-import {
-  Music,
-  ListChecks,
-  CalendarDays,
-  History,
-  User,
-  LogOut,
-  Download,
-  Upload,
-  Sparkles,
-} from "lucide-react";
+import { LogOut, Download, Upload } from "lucide-react";
 import {
   ConcertEventItem,
   PieceItem,
@@ -88,7 +78,6 @@ export default function HomePage() {
     [currentUser?.id]
   );
 
-  // Restore saved user from localStorage on mount
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_USER_KEY);
@@ -178,188 +167,235 @@ export default function HomePage() {
   const upcomingSessionsCount = sessions.filter(
     (s) => s.status !== "COMPLETED"
   ).length;
+  const completedSessionsCount = sessions.filter(
+    (s) => s.status === "COMPLETED"
+  ).length;
   const activeSession = sessions.find((s) => s.status === "ACTIVE");
   const nextConcert = concerts[0] || null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
-      {/* Top Header */}
-      <header className="sticky top-0 z-30 border-b border-slate-800/80 bg-slate-950/85 backdrop-blur-md">
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          {/* Brand & Next Concert Pill */}
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20">
-              <Music className="h-5 w-5" />
-            </div>
-            <div>
-              <h1 className="text-lg font-extrabold tracking-tight text-slate-100">
-                Repertoire & Probeplan
-              </h1>
-              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
-                <span>{pieces.length} Stücke</span>
-                <span>•</span>
-                <span>{upcomingSessionsCount} offene Proben</span>
+    <div className="min-h-screen bg-[var(--bg-paper)] text-[var(--ink-primary)]">
+      {/* Editorial Score Ledger Masthead — 12-Column Asymmetric Grid */}
+      <header className="sticky top-0 z-30 border-t-4 border-b border-[var(--rule-heavy)] bg-[var(--bg-surface)]">
+        <div className="mx-auto max-w-[1440px]">
+          <div className="grid grid-cols-1 lg:grid-cols-12">
+            {/* Columns 1–7: Editorial Masthead & Live Ledger Metrics */}
+            <div className="flex flex-col justify-between border-b border-[var(--rule-border)] px-4 py-4 sm:px-6 lg:col-span-7 lg:border-r lg:border-b-0">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="type-kicker text-[var(--ink-secondary)]">
+                  ENSEMBLE-PARTITUR & PROBENPLANUNG
+                </span>
                 {nextConcert && (
-                  <>
-                    <span>•</span>
-                    <span className="inline-flex items-center gap-1 font-medium text-amber-300">
-                      <Sparkles className="h-3 w-3" />
-                      Auftritt: {nextConcert.title}
-                      {nextConcert.scheduledDate
-                        ? ` (${new Date(
-                            nextConcert.scheduledDate
-                          ).toLocaleDateString("de-DE")})`
-                        : ""}
-                    </span>
-                  </>
+                  <span className="type-kicker border border-[var(--ink-primary)] bg-[var(--bg-recessed)] px-2 py-0.5 text-[var(--ink-primary)]">
+                    NÄCHSTER AUFTRITT: {nextConcert.title}
+                    {nextConcert.scheduledDate
+                      ? ` (${new Date(
+                          nextConcert.scheduledDate
+                        ).toLocaleDateString("de-DE")})`
+                      : ""}
+                  </span>
+                )}
+              </div>
+
+              <div className="mt-1.5 flex flex-wrap items-baseline justify-between gap-4">
+                <h1 className="type-masthead text-[var(--ink-primary)]">
+                  Repertoire & Probeplan
+                </h1>
+                <div className="font-mono-tabular flex items-center gap-4 text-xs text-[var(--ink-secondary)]">
+                  <span>
+                    <strong className="text-[var(--ink-primary)]">
+                      {pieces.length}
+                    </strong>{" "}
+                    STÜCKE
+                  </span>
+                  <span>/</span>
+                  <span>
+                    <strong className="text-[var(--ink-primary)]">
+                      {upcomingSessionsCount}
+                    </strong>{" "}
+                    PROBEN OFFEN
+                  </span>
+                  <span>/</span>
+                  <span>
+                    <strong className="text-[var(--ink-primary)]">
+                      {concerts.length}
+                    </strong>{" "}
+                    AUFTRITTE
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Columns 8–12: Player Identity Stamp & Archival Backup Controls */}
+            <div className="flex flex-col justify-between bg-[var(--bg-recessed)] px-4 py-3.5 sm:px-6 lg:col-span-5">
+              <div className="flex items-center justify-between">
+                <span className="type-kicker text-[var(--ink-secondary)]">
+                  SPIELER-IDENTIFIKATION (FREIE EINGABE)
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={handleExportBackup}
+                    title="Persistentes JSON-Backup exportieren"
+                    className="font-mono-tabular ui-transition inline-flex items-center gap-1 border border-[var(--rule-border)] bg-[var(--bg-surface)] px-2 py-1 text-[11px] font-medium text-[var(--ink-primary)] hover:border-[var(--ink-primary)] cursor-pointer"
+                  >
+                    <Download className="h-3 w-3" />
+                    EXPORT
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    title="JSON-Backup importieren"
+                    className="font-mono-tabular ui-transition inline-flex items-center gap-1 border border-[var(--rule-border)] bg-[var(--bg-surface)] px-2 py-1 text-[11px] font-medium text-[var(--ink-primary)] hover:border-[var(--ink-primary)] cursor-pointer"
+                  >
+                    <Upload className="h-3 w-3" />
+                    IMPORT
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="application/json"
+                    onChange={handleImportBackup}
+                    className="hidden"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-2">
+                {currentUser ? (
+                  <div className="flex items-center justify-between border border-[var(--ink-primary)] bg-[var(--bg-surface)] px-3 py-1.5">
+                    <div>
+                      <span className="type-kicker mr-2 text-[var(--ink-muted)]">
+                        AKTIVER SPIELER:
+                      </span>
+                      <span className="font-display text-sm font-semibold text-[var(--ink-primary)]">
+                        {currentUser.name}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      title="Namen wechseln / Abmelden"
+                      className="type-kicker inline-flex items-center gap-1 text-[var(--ink-secondary)] hover:text-[var(--accent)] cursor-pointer"
+                    >
+                      WECHSELN <LogOut className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <form
+                    onSubmit={handleLoginSubmit}
+                    className="flex items-stretch gap-2"
+                  >
+                    <input
+                      type="text"
+                      value={nameInput}
+                      onChange={(e) => setNameInput(e.target.value)}
+                      placeholder="Deinen Namen eingeben (ohne Auswahlliste)..."
+                      className="w-full border border-[var(--ink-primary)] bg-[var(--bg-surface)] px-3 py-1.5 text-sm text-[var(--ink-primary)] placeholder-[var(--ink-muted)] focus:outline-none"
+                    />
+                    <button
+                      type="submit"
+                      disabled={loggingIn || !nameInput.trim()}
+                      className="type-kicker ui-transition bg-[var(--accent)] px-4 py-1.5 text-[var(--accent-ink)] disabled:opacity-40 cursor-pointer"
+                    >
+                      ANMELDEN
+                    </button>
+                  </form>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Right User Identification & Persistent Backup Controls */}
-          <div className="flex flex-wrap items-center gap-2.5">
-            {currentUser ? (
-              <div className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900 px-3 py-1.5">
-                <User className="h-4 w-4 text-amber-400" />
-                <span className="text-xs text-slate-400">Angemeldet als:</span>
-                <span className="text-xs font-bold text-slate-100">
-                  {currentUser.name}
-                </span>
+          {/* Ledger Section Index Bar */}
+          <nav
+            aria-label="Hauptnavigation"
+            className="grid grid-cols-2 border-t border-[var(--rule-border)] bg-[var(--bg-surface)] sm:grid-cols-4"
+          >
+            {(
+              [
+                {
+                  id: "repertoire",
+                  num: "01",
+                  label: "Repertoire & Abstimmung",
+                  count: pieces.length,
+                },
+                {
+                  id: "probeplan",
+                  num: "02",
+                  label: "Probeplan & Live-Probe",
+                  count: upcomingSessionsCount,
+                  badge: activeSession ? "LIVE" : undefined,
+                },
+                {
+                  id: "kalender",
+                  num: "03",
+                  label: "Terminkalender & Auftritte",
+                  count: sessions.length + concerts.length,
+                },
+                {
+                  id: "historie",
+                  num: "04",
+                  label: "Proben-Protokolle",
+                  count: completedSessionsCount,
+                },
+              ] as const
+            ).map((tab) => {
+              const active = activeTab === tab.id;
+              return (
                 <button
+                  key={tab.id}
                   type="button"
-                  onClick={handleLogout}
-                  title="Namen wechseln / Abmelden"
-                  className="ml-1 rounded p-1 text-slate-400 hover:bg-slate-800 hover:text-slate-200 cursor-pointer"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`ui-transition flex items-baseline justify-between border-r border-b sm:border-b-0 border-[var(--rule-border)] last:border-r-0 px-4 py-3 text-left cursor-pointer ${
+                    active
+                      ? "bg-[var(--bg-paper)] border-b-2 border-b-[var(--accent)]"
+                      : "bg-[var(--bg-surface)] hover:bg-[var(--bg-recessed)]"
+                  }`}
                 >
-                  <LogOut className="h-3.5 w-3.5" />
+                  <div className="flex items-baseline gap-2.5 min-w-0">
+                    <span
+                      className={`font-mono-tabular text-xs font-semibold ${
+                        active
+                          ? "text-[var(--accent)]"
+                          : "text-[var(--ink-muted)]"
+                      }`}
+                    >
+                      {tab.num}
+                    </span>
+                    <span
+                      className={`truncate text-sm ${
+                        active
+                          ? "font-semibold text-[var(--ink-primary)]"
+                          : "font-medium text-[var(--ink-secondary)]"
+                      }`}
+                    >
+                      {tab.label}
+                    </span>
+                  </div>
+                  <div className="ml-2 flex items-center gap-1.5 shrink-0">
+                    {"badge" in tab && tab.badge && (
+                      <span className="font-mono-tabular bg-[var(--accent)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--accent-ink)]">
+                        {tab.badge}
+                      </span>
+                    )}
+                    <span className="font-mono-tabular text-xs text-[var(--ink-muted)]">
+                      [{tab.count}]
+                    </span>
+                  </div>
                 </button>
-              </div>
-            ) : (
-              <form
-                onSubmit={handleLoginSubmit}
-                className="flex items-center gap-1.5"
-              >
-                <div className="relative">
-                  <User className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
-                  <input
-                    type="text"
-                    value={nameInput}
-                    onChange={(e) => setNameInput(e.target.value)}
-                    placeholder="Dein Spielername..."
-                    className="w-44 rounded-xl border border-slate-700 bg-slate-900 py-1.5 pl-8 pr-3 text-xs text-slate-100 placeholder-slate-500 focus:border-amber-500 focus:outline-none"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={loggingIn || !nameInput.trim()}
-                  className="rounded-xl bg-amber-500 px-3 py-1.5 text-xs font-bold text-slate-950 hover:bg-amber-400 disabled:opacity-40 cursor-pointer"
-                >
-                  Anmelden
-                </button>
-              </form>
-            )}
-
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={handleExportBackup}
-                title="Alle Daten als JSON-Backup herunterladen"
-                className="inline-flex items-center gap-1 rounded-xl border border-slate-800 bg-slate-900 px-2.5 py-1.5 text-xs text-slate-300 hover:border-slate-700 hover:text-slate-100 cursor-pointer"
-              >
-                <Download className="h-3.5 w-3.5" />
-                <span className="hidden md:inline">Backup</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                title="JSON-Backup importieren"
-                className="inline-flex items-center gap-1 rounded-xl border border-slate-800 bg-slate-900 px-2.5 py-1.5 text-xs text-slate-300 hover:border-slate-700 hover:text-slate-100 cursor-pointer"
-              >
-                <Upload className="h-3.5 w-3.5" />
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="application/json"
-                onChange={handleImportBackup}
-                className="hidden"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Navigation Tabs */}
-        <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <nav className="-mb-px flex space-x-2 overflow-x-auto pb-2 sm:pb-0">
-            <button
-              type="button"
-              onClick={() => setActiveTab("repertoire")}
-              className={`inline-flex items-center gap-2 border-b-2 px-4 py-2.5 text-xs font-bold whitespace-nowrap transition cursor-pointer ${
-                activeTab === "repertoire"
-                  ? "border-amber-500 text-amber-400"
-                  : "border-transparent text-slate-400 hover:border-slate-700 hover:text-slate-200"
-              }`}
-            >
-              <Music className="h-4 w-4" />
-              Repertoire & Abstimmung ({pieces.length})
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab("probeplan")}
-              className={`inline-flex items-center gap-2 border-b-2 px-4 py-2.5 text-xs font-bold whitespace-nowrap transition cursor-pointer ${
-                activeTab === "probeplan"
-                  ? "border-amber-500 text-amber-400"
-                  : "border-transparent text-slate-400 hover:border-slate-700 hover:text-slate-200"
-              }`}
-            >
-              <ListChecks className="h-4 w-4" />
-              Probeplan & Live-Probe ({upcomingSessionsCount})
-              {activeSession && (
-                <span className="ml-1 rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] text-emerald-300">
-                  Live
-                </span>
-              )}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab("kalender")}
-              className={`inline-flex items-center gap-2 border-b-2 px-4 py-2.5 text-xs font-bold whitespace-nowrap transition cursor-pointer ${
-                activeTab === "kalender"
-                  ? "border-amber-500 text-amber-400"
-                  : "border-transparent text-slate-400 hover:border-slate-700 hover:text-slate-200"
-              }`}
-            >
-              <CalendarDays className="h-4 w-4" />
-              Terminkalender & Auftritte ({sessions.length + concerts.length})
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab("historie")}
-              className={`inline-flex items-center gap-2 border-b-2 px-4 py-2.5 text-xs font-bold whitespace-nowrap transition cursor-pointer ${
-                activeTab === "historie"
-                  ? "border-amber-500 text-amber-400"
-                  : "border-transparent text-slate-400 hover:border-slate-700 hover:text-slate-200"
-              }`}
-            >
-              <History className="h-4 w-4" />
-              Proben-Protokolle (
-              {sessions.filter((s) => s.status === "COMPLETED").length})
-            </button>
+              );
+            })}
           </nav>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+      {/* Main Workspace Container */}
+      <main className="mx-auto max-w-[1440px] px-4 py-8 sm:px-6">
         {loading ? (
-          <div className="flex h-64 items-center justify-center">
-            <div className="text-sm text-slate-400">
-              Lade Repertoire und Probeplan...
-            </div>
+          <div className="border border-[var(--rule-border)] bg-[var(--bg-surface)] p-12 text-center">
+            <span className="type-kicker text-[var(--ink-secondary)]">
+              LADE PARTITUR- & PROBENDATEN AUS PERSISTENTEM SPEICHER...
+            </span>
           </div>
         ) : (
           <>
@@ -405,19 +441,22 @@ export default function HomePage() {
         )}
       </main>
 
-      {/* Prompt Login Modal if unauthenticated user clicks vote/log */}
+      {/* Prompt Login Modal */}
       {showLoginModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
-            <h2 className="text-lg font-bold text-slate-100">
-              Wie heißt du?
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-md border-2 border-[var(--rule-heavy)] bg-[var(--bg-surface)] p-6">
+            <div className="type-kicker text-[var(--accent)]">
+              SPIELER-REGISTRIERUNG
+            </div>
+            <h2 className="type-section-h2 mt-1 text-[var(--ink-primary)]">
+              Wie lautet dein Name?
             </h2>
-            <p className="mt-1 text-xs text-slate-400">
-              Gib einfach deinen Namen ein, um Stücke zu bewerten und deine
-              Proben-Fortschritte zu loggen. Dein Name wird auf diesem Gerät
-              gespeichert.
+            <p className="mt-2 text-sm text-[var(--ink-secondary)]">
+              Gib deinen Vornamen oder Spitznamen ein, um Stücke zu bewerten und
+              Proben-Protokolle einzutragen. Es wird keine öffentliche
+              Namensliste beim Login angezeigt.
             </p>
-            <form onSubmit={handleLoginSubmit} className="mt-4 space-y-4">
+            <form onSubmit={handleLoginSubmit} className="mt-5 space-y-4">
               <input
                 type="text"
                 required
@@ -425,22 +464,22 @@ export default function HomePage() {
                 value={nameInput}
                 onChange={(e) => setNameInput(e.target.value)}
                 placeholder="Dein Vorname / Spitzname..."
-                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3.5 py-2.5 text-sm text-slate-100 focus:border-amber-500 focus:outline-none"
+                className="w-full border border-[var(--ink-primary)] bg-[var(--bg-paper)] px-3.5 py-2.5 text-sm text-[var(--ink-primary)] placeholder-[var(--ink-muted)] focus:outline-none"
               />
               <div className="flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setShowLoginModal(false)}
-                  className="rounded-xl border border-slate-700 px-4 py-2 text-xs text-slate-300 hover:bg-slate-800 cursor-pointer"
+                  className="type-kicker border border-[var(--rule-border)] bg-[var(--bg-paper)] px-4 py-2.5 text-[var(--ink-secondary)] hover:border-[var(--ink-primary)] cursor-pointer"
                 >
-                  Abbrechen
+                  ABBRECHEN
                 </button>
                 <button
                   type="submit"
                   disabled={loggingIn || !nameInput.trim()}
-                  className="rounded-xl bg-amber-500 px-5 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400 cursor-pointer"
+                  className="type-kicker bg-[var(--accent)] px-5 py-2.5 text-[var(--accent-ink)] disabled:opacity-40 cursor-pointer"
                 >
-                  {loggingIn ? "Startet..." : "Weiter"}
+                  {loggingIn ? "SPEICHERT..." : "NAME BESTÄTIGEN"}
                 </button>
               </div>
             </form>
@@ -450,4 +489,3 @@ export default function HomePage() {
     </div>
   );
 }
-

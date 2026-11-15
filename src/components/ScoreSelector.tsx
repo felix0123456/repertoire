@@ -6,7 +6,6 @@ interface ScoreSelectorProps {
   label: string;
   value: number;
   onChange: (val: number) => void;
-  colorScheme?: "amber" | "emerald" | "rose";
   disabled?: boolean;
   hint?: string;
 }
@@ -15,24 +14,20 @@ export default function ScoreSelector({
   label,
   value,
   onChange,
-  colorScheme = "amber",
   disabled = false,
   hint,
 }: ScoreSelectorProps) {
-  const activeClasses = {
-    amber: "bg-amber-500 text-slate-950 border-amber-400 font-bold shadow-sm",
-    emerald:
-      "bg-emerald-500 text-slate-950 border-emerald-400 font-bold shadow-sm",
-    rose: "bg-rose-500 text-white border-rose-400 font-bold shadow-sm",
-  }[colorScheme];
-
   return (
-    <div className="flex flex-col gap-1">
-      <div className="flex items-center justify-between text-xs">
-        <span className="font-medium text-slate-300">{label}</span>
-        {hint && <span className="text-[11px] text-slate-400">{hint}</span>}
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-baseline justify-between">
+        <span className="type-kicker text-[var(--ink-secondary)]">{label}</span>
+        {hint && (
+          <span className="font-mono-tabular text-[11px] text-[var(--ink-muted)]">
+            {hint}
+          </span>
+        )}
       </div>
-      <div className="flex items-center gap-1">
+      <div className="grid grid-cols-5 border border-[var(--rule-border)] bg-[var(--bg-paper)]">
         {[1, 2, 3, 4, 5].map((num) => {
           const active = value === num;
           return (
@@ -41,10 +36,10 @@ export default function ScoreSelector({
               type="button"
               disabled={disabled}
               onClick={() => onChange(num)}
-              className={`h-7 flex-1 rounded-md border text-xs transition-all ${
+              className={`font-mono-tabular ui-transition min-h-[36px] border-r border-[var(--rule-border)] last:border-r-0 text-xs font-semibold ${
                 active
-                  ? activeClasses
-                  : "border-slate-700/80 bg-slate-800/70 text-slate-300 hover:border-slate-600 hover:bg-slate-800"
+                  ? "bg-[var(--accent)] text-[var(--accent-ink)]"
+                  : "bg-[var(--bg-surface)] text-[var(--ink-primary)] hover:bg-[var(--bg-recessed)]"
               } ${disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}
             >
               {num}
@@ -55,4 +50,3 @@ export default function ScoreSelector({
     </div>
   );
 }
-
