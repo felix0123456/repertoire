@@ -28,6 +28,8 @@ ENV HOME=/app
 RUN apt-get update -y && apt-get install -y --no-install-recommends openssl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
+RUN npm install -g prisma@5.22.0 && npm cache clean --force
+
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
 
@@ -37,12 +39,10 @@ RUN mkdir -p .next /app/data /app/public/uploads
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
-RUN npm install prisma@5.22.0 --no-save --legacy-peer-deps && npm cache clean --force
-
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 ENV DATABASE_URL="file:/app/data/dev.db"
 
 # Push DB schema directly to mounted persistent volume on startup without data loss, then start server
-CMD ["/bin/sh", "-c", "./node_modules/.bin/prisma db push --skip-generate && node server.js"]
+CMD ["/bin/sh", "-c", "prisma db push --skip-generate && node server.js"]
