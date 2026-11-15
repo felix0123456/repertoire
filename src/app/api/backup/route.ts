@@ -80,6 +80,7 @@ export async function POST(req: NextRequest) {
             data: {
               id: p.id,
               title: p.title,
+              folderNumber: p.folderNumber || "",
               artist: p.artist || "",
               singers: p.singers || "",
               soloists: p.soloists || "",

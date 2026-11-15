@@ -9,6 +9,7 @@ export interface PieceVoteItem {
 export interface PieceItem {
   id: string;
   title: string;
+  folderNumber: string;
   artist: string;
   singers: string;
   singerList: string[];
@@ -44,6 +45,7 @@ export interface SessionPieceItem {
   piece: {
     id: string;
     title: string;
+    folderNumber: string;
     artist: string;
     singers: string;
     singerList: string[];

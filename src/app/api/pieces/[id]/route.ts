@@ -14,6 +14,9 @@ export async function PATCH(
     if (typeof body.title === "string" && body.title.trim()) {
       data.title = body.title.trim();
     }
+    if (typeof body.folderNumber === "string") {
+      data.folderNumber = body.folderNumber.trim();
+    }
     if (typeof body.artist === "string") {
       data.artist = body.artist.trim();
     }

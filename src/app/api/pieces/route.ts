@@ -46,6 +46,7 @@ export async function GET(req: NextRequest) {
       return {
         id: p.id,
         title: p.title,
+        folderNumber: p.folderNumber,
         artist: p.artist,
         singers: p.singers,
         singerList,
@@ -117,6 +118,7 @@ export async function POST(req: NextRequest) {
     const piece = await prisma.piece.create({
       data: {
         title,
+        folderNumber: (body.folderNumber || "").trim(),
         artist: (body.artist || "").trim(),
         singers: normalizeTags(body.singers || ""),
         soloists: normalizeTags(body.soloists || ""),

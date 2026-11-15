@@ -825,6 +825,11 @@ export default function ProbeplanTab({
                                     <h4 className="type-piece-h3 text-[var(--ink-primary)]">
                                       {sp.piece.title}
                                     </h4>
+                                    {sp.piece.folderNumber && (
+                                      <span className="type-kicker border border-[var(--ink-primary)] bg-[var(--ink-primary)] px-1.5 py-0.5 text-[var(--bg-surface)]">
+                                        MAPPE NR. {sp.piece.folderNumber}
+                                      </span>
+                                    )}
                                     {sp.piece.artist && (
                                       <span className="text-xs text-[var(--ink-secondary)]">
                                         — {sp.piece.artist}
@@ -1004,6 +1009,7 @@ export default function ProbeplanTab({
                         {availablePiecesToAdd.map((p) => (
                           <option key={p.id} value={p.id}>
                             {p.title}
+                            {p.folderNumber ? ` [Mappe ${p.folderNumber}]` : ""}
                             {p.singers ? ` (Sänger: ${p.singers})` : ""}
                             {p.soloists ? ` [Solist: ${p.soloists}]` : ""} —
                             Prio {p.priorityScore.toFixed(1)}

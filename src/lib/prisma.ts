@@ -127,6 +127,7 @@ export async function ensurePersistentDataLoaded(): Promise<void> {
             create: {
               id: p.id,
               title: p.title,
+              folderNumber: p.folderNumber || "",
               artist: p.artist || "",
               singers: p.singers || "",
               soloists: p.soloists || "",

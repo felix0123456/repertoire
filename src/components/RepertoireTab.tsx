@@ -49,6 +49,7 @@ export default function RepertoireTab({
 
   const [sortBy, setSortBy] = useState<
     | "priority"
+    | "folderNumber"
     | "like"
     | "practice"
     | "confidence"
@@ -70,6 +71,7 @@ export default function RepertoireTab({
 
   // Form states
   const [title, setTitle] = useState("");
+  const [folderNumber, setFolderNumber] = useState("");
   const [artist, setArtist] = useState("");
   const [singers, setSingers] = useState("");
   const [soloists, setSoloists] = useState("");
@@ -86,6 +88,7 @@ export default function RepertoireTab({
   const openCreateModal = () => {
     setEditingPiece(null);
     setTitle("");
+    setFolderNumber("");
     setArtist("");
     setSingers("");
     setSoloists("");
@@ -101,6 +104,7 @@ export default function RepertoireTab({
   const openEditModal = (p: PieceItem) => {
     setEditingPiece(p);
     setTitle(p.title);
+    setFolderNumber(p.folderNumber || "");
     setArtist(p.artist);
     setSingers(p.singers);
     setSoloists(p.soloists);
@@ -121,6 +125,7 @@ export default function RepertoireTab({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             title,
+            folderNumber,
             artist,
             singers,
             soloists,
@@ -135,6 +140,7 @@ export default function RepertoireTab({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             title,
+            folderNumber,
             artist,
             singers,
             soloists,
@@ -205,7 +211,7 @@ export default function RepertoireTab({
     const list = pieces.filter((p) => {
       if (q) {
         const hay =
-          `${p.title} ${p.artist} ${p.singers} ${p.soloists} ${p.songType} ${p.notes}`.toLowerCase();
+          `${p.title} ${p.folderNumber} ${p.artist} ${p.singers} ${p.soloists} ${p.songType} ${p.notes}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       if (
@@ -241,6 +247,13 @@ export default function RepertoireTab({
       switch (sortBy) {
         case "priority":
           cmp = a.priorityScore - b.priorityScore;
+          break;
+        case "folderNumber":
+          cmp = (a.folderNumber || "999999").localeCompare(
+            b.folderNumber || "999999",
+            "de",
+            { numeric: true }
+          );
           break;
         case "like":
           cmp = a.avgLike - b.avgLike;
@@ -353,7 +366,13 @@ export default function RepertoireTab({
                   const val = e.target.value as typeof sortBy;
                   setSortBy(val);
                   if (
-                    ["title", "singer", "soloist", "songType"].includes(val)
+                    [
+                      "title",
+                      "folderNumber",
+                      "singer",
+                      "soloist",
+                      "songType",
+                    ].includes(val)
                   ) {
                     setSortDir("asc");
                   } else {
@@ -363,6 +382,7 @@ export default function RepertoireTab({
                 className="w-full border border-[var(--rule-border)] bg-[var(--bg-paper)] px-3 py-2 text-sm text-[var(--ink-primary)] focus:border-[var(--ink-primary)] focus:outline-none"
               >
                 <option value="priority">Proben-Dringlichkeit (Score)</option>
+                <option value="folderNumber">Nummer in der Mappe</option>
                 <option value="like">Beliebtheit (Favoriten)</option>
                 <option value="practice">Übungsbedarf</option>
                 <option value="confidence">Sicherheit</option>
@@ -528,6 +548,11 @@ export default function RepertoireTab({
                         </div>
 
                         <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                          {piece.folderNumber && (
+                            <span className="type-kicker border border-[var(--ink-primary)] bg-[var(--ink-primary)] px-2 py-0.5 text-[var(--bg-surface)]">
+                              MAPPE NR. {piece.folderNumber}
+                            </span>
+                          )}
                           <span className="type-kicker border border-[var(--ink-primary)] bg-[var(--bg-recessed)] px-2 py-0.5 text-[var(--ink-primary)]">
                             {DIFFICULTY_LABELS[piece.difficulty] || "Mittel"}
                           </span>
@@ -562,8 +587,16 @@ export default function RepertoireTab({
                     </div>
                   </div>
 
-                  {/* Metadata Grid: Singers, Soloists, Last Practiced */}
-                  <div className="mt-4 grid grid-cols-1 gap-px border border-[var(--rule-border)] bg-[var(--rule-border)] sm:grid-cols-3">
+                  {/* Metadata Grid: Folder Number, Singers, Soloists, Last Practiced */}
+                  <div className="mt-4 grid grid-cols-2 gap-px border border-[var(--rule-border)] bg-[var(--rule-border)] sm:grid-cols-4">
+                    <div className="bg-[var(--bg-paper)] px-3 py-2">
+                      <div className="type-kicker text-[var(--ink-muted)]">
+                        NUMMER IN DER MAPPE
+                      </div>
+                      <div className="font-mono-tabular mt-0.5 text-sm font-semibold text-[var(--ink-primary)]">
+                        {piece.folderNumber || "—"}
+                      </div>
+                    </div>
                     <div className="bg-[var(--bg-paper)] px-3 py-2">
                       <div className="type-kicker text-[var(--ink-muted)]">
                         SÄNGER
@@ -748,8 +781,8 @@ export default function RepertoireTab({
             </h2>
 
             <form onSubmit={handleSavePiece} className="mt-5 space-y-4">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-12">
+                <div className="sm:col-span-5">
                   <label className="type-kicker mb-1.5 block text-[var(--ink-secondary)]">
                     Titel des Stücks *
                   </label>
@@ -762,7 +795,19 @@ export default function RepertoireTab({
                     className="w-full border border-[var(--rule-border)] bg-[var(--bg-paper)] px-3 py-2 text-sm text-[var(--ink-primary)] focus:border-[var(--ink-primary)] focus:outline-none"
                   />
                 </div>
-                <div>
+                <div className="sm:col-span-3">
+                  <label className="type-kicker mb-1.5 block text-[var(--ink-secondary)]">
+                    Nummer in der Mappe
+                  </label>
+                  <input
+                    type="text"
+                    value={folderNumber}
+                    onChange={(e) => setFolderNumber(e.target.value)}
+                    placeholder="z.B. 14 oder A-3"
+                    className="font-mono-tabular w-full border border-[var(--rule-border)] bg-[var(--bg-paper)] px-3 py-2 text-sm text-[var(--ink-primary)] focus:border-[var(--ink-primary)] focus:outline-none"
+                  />
+                </div>
+                <div className="sm:col-span-4">
                   <label className="type-kicker mb-1.5 block text-[var(--ink-secondary)]">
                     Interpret / Komponist
                   </label>

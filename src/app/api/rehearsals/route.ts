@@ -76,6 +76,7 @@ export async function GET() {
           piece: {
             id: sp.piece.id,
             title: sp.piece.title,
+            folderNumber: sp.piece.folderNumber,
             artist: sp.piece.artist,
             singers: sp.piece.singers,
             singerList: splitTags(sp.piece.singers),

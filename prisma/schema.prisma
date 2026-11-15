@@ -19,6 +19,7 @@ model User {
 model Piece {
   id              String                  @id @default(cuid())
   title           String
+  folderNumber    String                  @default("") // Nummer in der Mappe
   artist          String                  @default("")
   singers         String                  @default("") // Comma-separated singer names
   soloists        String                  @default("") // Comma-separated soloist names
