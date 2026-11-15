@@ -1,4 +1,4 @@
-FROM node:22-bullseye-slim AS base
+FROM node:22-bookworm-slim AS base
 
 # 1. Dependencies Stage
 FROM base AS deps
