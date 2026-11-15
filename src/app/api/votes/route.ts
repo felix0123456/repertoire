@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma, savePersistentSnapshot } from "@/lib/prisma";
+import {
+  ensurePersistentDataLoaded,
+  prisma,
+  savePersistentSnapshot,
+} from "@/lib/prisma";
 import { recalculateSchedule } from "@/lib/scheduler";
 
 function clampScore(val: unknown, fallback = 3): number {
@@ -10,14 +14,39 @@ function clampScore(val: unknown, fallback = 3): number {
 
 export async function POST(req: NextRequest) {
   try {
+    await ensurePersistentDataLoaded();
     const body = await req.json();
-    const { userId, pieceId } = body;
+    let { userId } = body;
+    const { pieceId, userName } = body;
 
-    if (!userId || !pieceId) {
+    if ((!userId && !userName) || !pieceId) {
       return NextResponse.json(
         { error: "Spieler-ID und Stück-ID sind erforderlich." },
         { status: 400 }
       );
+    }
+
+    // Ensure user exists (resolve by id first, then case-insensitive name, or create)
+    let userRecord = userId
+      ? await prisma.user.findUnique({ where: { id: userId } })
+      : null;
+
+    if (!userRecord && userName) {
+      const trimmedName = String(userName).trim();
+      const allUsers = await prisma.user.findMany();
+      userRecord =
+        allUsers.find(
+          (u) => u.name.toLowerCase() === trimmedName.toLowerCase()
+        ) || null;
+      if (!userRecord && trimmedName) {
+        userRecord = await prisma.user.create({
+          data: { id: userId || undefined, name: trimmedName },
+        });
+      }
+    }
+
+    if (userRecord) {
+      userId = userRecord.id;
     }
 
     const existing = await prisma.pieceVote.findUnique({
@@ -69,4 +98,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-

@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma, savePersistentSnapshot } from "@/lib/prisma";
+import {
+  ensurePersistentDataLoaded,
+  prisma,
+  savePersistentSnapshot,
+} from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
   try {
+    await ensurePersistentDataLoaded();
     const body = await req.json();
     const rawName = (body.name || "").trim();
     if (!rawName) {
@@ -17,19 +22,28 @@ export async function POST(req: NextRequest) {
     let user = allUsers.find(
       (u) => u.name.toLowerCase() === rawName.toLowerCase()
     );
+    let isNewUser = false;
 
     if (!user) {
       user = await prisma.user.create({
         data: { name: rawName },
       });
+      isNewUser = true;
       await savePersistentSnapshot();
     }
+
+    const voteCount = await prisma.pieceVote.count({
+      where: { userId: user.id },
+    });
 
     return NextResponse.json({
       user: {
         id: user.id,
         name: user.name,
       },
+      isNewUser,
+      voteCount,
+      isFirstTimeOnboarding: isNewUser && voteCount === 0,
     });
   } catch (error) {
     console.error("Error in /api/user:", error);
@@ -39,4 +53,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-

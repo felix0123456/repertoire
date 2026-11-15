@@ -197,6 +197,7 @@ export default function RepertoireTab({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId: currentUser.id,
+          userName: currentUser.name,
           pieceId: piece.id,
           ...current,
           [field]: value,

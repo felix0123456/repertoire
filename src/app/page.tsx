@@ -16,6 +16,32 @@ import HistorieTab from "@/components/HistorieTab";
 import OnboardingModal from "@/components/OnboardingModal";
 
 const STORAGE_USER_KEY = "repertoire_current_user_v1";
+const ONBOARDED_USERS_KEY = "repertoire_onboarded_users_v1";
+
+function hasUserCompletedInitialOnboarding(name: string): boolean {
+  try {
+    const raw = localStorage.getItem(ONBOARDED_USERS_KEY);
+    if (!raw) return false;
+    const list: string[] = JSON.parse(raw);
+    return Array.isArray(list) && list.includes(name.trim().toLowerCase());
+  } catch {
+    return false;
+  }
+}
+
+function markUserInitialOnboardingSeen(name: string): void {
+  try {
+    const raw = localStorage.getItem(ONBOARDED_USERS_KEY);
+    const list: string[] = raw ? JSON.parse(raw) : [];
+    const key = name.trim().toLowerCase();
+    if (!list.includes(key)) {
+      list.push(key);
+      localStorage.setItem(ONBOARDED_USERS_KEY, JSON.stringify(list));
+    }
+  } catch {
+    // ignore storage errors
+  }
+}
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<
@@ -50,11 +76,19 @@ export default function HomePage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const fetchAllData = useCallback(
-    async (overrideUserId?: string): Promise<PieceItem[]> => {
+    async (
+      overrideUserId?: string,
+      overrideUserName?: string
+    ): Promise<PieceItem[]> => {
       try {
         const uid = overrideUserId ?? currentUser?.id ?? "";
+        const uname = overrideUserName ?? currentUser?.name ?? "";
         const [piecesRes, rehearsalsRes] = await Promise.all([
-          fetch(`/api/pieces?userId=${encodeURIComponent(uid)}`),
+          fetch(
+            `/api/pieces?userId=${encodeURIComponent(
+              uid
+            )}&userName=${encodeURIComponent(uname)}`
+          ),
           fetch("/api/rehearsals"),
         ]);
 
@@ -82,25 +116,55 @@ export default function HomePage() {
         setLoading(false);
       }
     },
-    [currentUser?.id]
+    [currentUser?.id, currentUser?.name]
   );
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_USER_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed?.id && parsed?.name) {
-          setCurrentUser(parsed);
-          fetchAllData(parsed.id);
-          return;
+    let mounted = true;
+    async function initSession() {
+      try {
+        const saved = localStorage.getItem(STORAGE_USER_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed?.name) {
+            // Silently sync user record by name so ID & personal ratings always match
+            const uRes = await fetch("/api/user", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ name: parsed.name }),
+            });
+            if (uRes.ok) {
+              const uData = await uRes.json();
+              if (mounted && uData?.user) {
+                setCurrentUser(uData.user);
+                localStorage.setItem(
+                  STORAGE_USER_KEY,
+                  JSON.stringify(uData.user)
+                );
+                await fetchAllData(uData.user.id, uData.user.name);
+                return;
+              }
+            }
+            if (mounted) {
+              setCurrentUser(parsed);
+              await fetchAllData(parsed.id || "", parsed.name);
+              return;
+            }
+          }
         }
+      } catch {
+        // ignore storage errors
       }
-    } catch {
-      // ignore storage errors
+      if (mounted) {
+        await fetchAllData("", "");
+      }
     }
-    fetchAllData("");
-  }, [fetchAllData]);
+    initSession();
+    return () => {
+      mounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -119,14 +183,22 @@ export default function HomePage() {
         localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(data.user));
         setNameInput("");
         setShowLoginModal(false);
-        const loadedPieces = await fetchAllData(data.user.id);
-        const unratedCount = loadedPieces.filter((p) => !p.myVote).length;
-        // Automatically launch initial rating onboarding for any user with unrated pieces
-        // or if onboarding was explicitly clicked before login
-        if (
+        const loadedPieces = await fetchAllData(data.user.id, data.user.name);
+        const ratedCount = loadedPieces.filter((p) => Boolean(p.myVote)).length;
+        const alreadySeen = hasUserCompletedInitialOnboarding(data.user.name);
+
+        // Only launch automatic onboarding on the very first login of a new user
+        // (when they have 0 existing ratings and haven't seen onboarding before),
+        // OR if they explicitly clicked the onboarding button while logged out.
+        const shouldOpenOnboarding =
           loadedPieces.length > 0 &&
-          (unratedCount > 0 || pendingOnboarding)
-        ) {
+          (pendingOnboarding ||
+            (Boolean(data.isFirstTimeOnboarding) &&
+              ratedCount === 0 &&
+              !alreadySeen));
+
+        markUserInitialOnboardingSeen(data.user.name);
+        if (shouldOpenOnboarding) {
           setShowOnboardingModal(true);
         }
         setPendingOnboarding(false);

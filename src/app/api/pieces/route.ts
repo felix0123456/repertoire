@@ -15,6 +15,7 @@ export async function GET(req: NextRequest) {
   try {
     await ensurePersistentDataLoaded();
     const userId = req.nextUrl.searchParams.get("userId") || "";
+    const userName = (req.nextUrl.searchParams.get("userName") || "").trim();
 
     const pieces = await prisma.piece.findMany({
       include: {
@@ -39,9 +40,15 @@ export async function GET(req: NextRequest) {
       if (p.songType.trim()) songTypeSet.add(p.songType.trim());
 
       const stats = calculatePiecePriority(p);
-      const myVote = userId
-        ? p.votes.find((v) => v.userId === userId) || null
-        : null;
+      const myVote =
+        userId || userName
+          ? p.votes.find(
+              (v) =>
+                (userId && v.userId === userId) ||
+                (userName &&
+                  v.user.name.toLowerCase() === userName.toLowerCase())
+            ) || null
+          : null;
 
       return {
         id: p.id,
