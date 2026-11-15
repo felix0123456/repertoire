@@ -15,6 +15,11 @@
   --accent: #C83E2B;
   --accent-ink: #FDFBF7;
 
+  /* Typography Tokens (Real Google Webfonts) */
+  --font-display: "Fraunces", Georgia, serif;
+  --font-sans: "Plus Jakarta Sans", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
   /* Motion Tokens */
   --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
   --dur-entrance: 420ms;
