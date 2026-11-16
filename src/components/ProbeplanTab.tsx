@@ -82,8 +82,19 @@ export default function ProbeplanTab({
     Record<string, string>
   >({});
   const [errorBanner, setErrorBanner] = useState<string | null>(null);
+  const [showMobileConfig, setShowMobileConfig] = useState(false);
+  const [selectedMobileSessionId, setSelectedMobileSessionId] =
+    useState<string>("");
 
   const upcomingSessions = sessions.filter((s) => s.status !== "COMPLETED");
+  const activeMobileSessionId =
+    selectedMobileSessionId === "__ALL__"
+      ? "__ALL__"
+      : upcomingSessions.some((s) => s.id === selectedMobileSessionId)
+      ? selectedMobileSessionId
+      : upcomingSessions.find((s) => s.status === "ACTIVE")?.id ||
+        upcomingSessions[0]?.id ||
+        "";
 
   const handleSaveConfig = async (
     modeOverride?: "SIMPLE_COUNT" | "EXACT_DATES" | "MANUAL",
@@ -302,10 +313,81 @@ export default function ProbeplanTab({
 
   return (
     /* Asymmetric 12-Column Grid: Columns 1–4 Sticky Plan Controller, Columns 5–12 Session Sheets */
-    <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-8">
       {/* Left Rail: Columns 1–4 */}
       <aside className="lg:col-span-4">
-        <div className="sticky top-36 space-y-5 border-t-2 border-[var(--rule-heavy)] bg-[var(--bg-surface)] p-5 border-x border-b border-x-[var(--rule-border)] border-b-[var(--rule-border)]">
+        {/* MOBILE COMPACT SESSION SWITCHER & CONFIG TOGGLE (< 1024px) */}
+        <div className="mb-2 space-y-2 border border-[var(--ink-primary)] bg-[var(--bg-surface)] p-2 lg:hidden">
+          <div className="flex items-center justify-between gap-1.5">
+            <span className="type-kicker text-[var(--ink-secondary)]">
+              PROBEN-AUSWAHL ({upcomingSessions.length} OFFEN)
+            </span>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setShowMobileConfig((v) => !v)}
+                className={`type-kicker border px-2 py-1 text-[10px] cursor-pointer ${
+                  showMobileConfig
+                    ? "border-[var(--ink-primary)] bg-[var(--ink-primary)] text-[var(--bg-surface)]"
+                    : "border-[var(--rule-border)] bg-[var(--bg-recessed)] text-[var(--ink-primary)]"
+                }`}
+              >
+                ⚙ MODUS & ANZAHL
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setNewTitle(`Probe ${sessions.length + 1}`);
+                  setShowNewSessionModal(true);
+                }}
+                className="type-kicker inline-flex items-center gap-1 bg-[var(--accent)] px-2 py-1 text-[10px] text-[var(--accent-ink)] cursor-pointer"
+              >
+                <Plus className="h-3 w-3" /> PROBE
+              </button>
+            </div>
+          </div>
+
+          {upcomingSessions.length > 1 && (
+            <div className="flex gap-1 overflow-x-auto pb-0.5">
+              {upcomingSessions.map((s) => {
+                const isSelected = activeMobileSessionId === s.id;
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => setSelectedMobileSessionId(s.id)}
+                    className={`font-mono-tabular shrink-0 border px-2.5 py-1.5 text-xs font-semibold cursor-pointer ${
+                      isSelected
+                        ? "border-[var(--ink-primary)] bg-[var(--ink-primary)] text-[var(--bg-surface)]"
+                        : "border-[var(--rule-border)] bg-[var(--bg-paper)] text-[var(--ink-primary)]"
+                    }`}
+                  >
+                    #{String(s.sessionNumber).padStart(2, "0")}{" "}
+                    {s.status === "ACTIVE" ? "● LIVE" : ""}
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                onClick={() => setSelectedMobileSessionId("__ALL__")}
+                className={`type-kicker shrink-0 border px-2.5 py-1.5 text-[10px] cursor-pointer ${
+                  activeMobileSessionId === "__ALL__"
+                    ? "border-[var(--ink-primary)] bg-[var(--ink-primary)] text-[var(--bg-surface)]"
+                    : "border-[var(--rule-border)] bg-[var(--bg-paper)] text-[var(--ink-secondary)]"
+                }`}
+              >
+                ALLE ({upcomingSessions.length})
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* FULL CONFIG PANEL (Collapsible on Mobile, Sticky on Desktop) */}
+        <div
+          className={`${
+            showMobileConfig ? "block" : "hidden"
+          } lg:block sticky top-36 space-y-5 border-t-2 border-[var(--rule-heavy)] bg-[var(--bg-surface)] p-4 sm:p-5 border-x border-b border-x-[var(--rule-border)] border-b-[var(--rule-border)]`}
+        >
           <div className="border-b border-[var(--rule-border)] pb-3">
             <div className="type-kicker text-[var(--ink-muted)]">
               DISPOSITION & MODUS
@@ -475,6 +557,9 @@ export default function ProbeplanTab({
         ) : (
           upcomingSessions.map((session, sIdx) => {
             const isActive = session.status === "ACTIVE";
+            const isVisibleOnMobile =
+              activeMobileSessionId === "__ALL__" ||
+              activeMobileSessionId === session.id;
             const availablePiecesToAdd = pieces.filter(
               (p) => !session.pieces.some((sp) => sp.pieceId === p.id)
             );
@@ -487,7 +572,9 @@ export default function ProbeplanTab({
                     "--stagger-index": Math.min(sIdx, 8),
                   } as React.CSSProperties
                 }
-                className={`stagger-item border-t-2 bg-[var(--bg-surface)] p-5 sm:p-6 border-x border-b border-x-[var(--rule-border)] border-b-[var(--rule-border)] ${
+                className={`${
+                  isVisibleOnMobile ? "block" : "hidden"
+                } lg:block stagger-item border-t-2 bg-[var(--bg-surface)] p-3.5 sm:p-6 border-x border-b border-x-[var(--rule-border)] border-b-[var(--rule-border)] ${
                   isActive
                     ? "border-t-[var(--accent)]"
                     : "border-t-[var(--rule-heavy)]"

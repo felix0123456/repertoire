@@ -263,10 +263,76 @@ export default function HomePage() {
   const nextConcert = concerts[0] || null;
 
   return (
-    <div className="min-h-screen bg-[var(--bg-paper)] text-[var(--ink-primary)]">
-      {/* Editorial Score Ledger Masthead — 12-Column Asymmetric Grid */}
-      <header className="sticky top-0 z-30 border-t-4 border-b border-[var(--rule-heavy)] bg-[var(--bg-surface)]">
-        <div className="mx-auto max-w-[1440px]">
+    <div className="min-h-screen bg-[var(--bg-paper)] pb-16 text-[var(--ink-primary)] lg:pb-0">
+      {/* Hidden Backup File Input (shared by Mobile & Desktop) */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="application/json"
+        onChange={handleImportBackup}
+        className="hidden"
+      />
+
+      {/* Editorial Score Ledger Masthead — Compact on Mobile, 12-Column Asymmetric Grid on Desktop */}
+      <header className="sticky top-0 z-30 border-t-2 border-b border-[var(--rule-heavy)] bg-[var(--bg-surface)] lg:border-t-4">
+        {/* MOBILE COMPACT TOP BAR (< 1024px) */}
+        <div className="flex items-center justify-between gap-2 px-3 py-2 lg:hidden">
+          <div className="min-w-0">
+            <h1 className="font-display truncate text-base font-semibold leading-tight text-[var(--ink-primary)]">
+              Repertoire & Probeplan
+            </h1>
+            <div className="font-mono-tabular truncate text-[10px] text-[var(--ink-secondary)]">
+              {pieces.length} Stücke • {upcomingSessionsCount} Proben offen
+            </div>
+          </div>
+
+          <div className="flex shrink-0 items-center gap-1.5">
+            {currentUser ? (
+              <>
+                {pieces.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowOnboardingModal(true)}
+                    className="type-kicker border border-[var(--ink-primary)] bg-[var(--bg-recessed)] px-2 py-1 text-[10px] text-[var(--ink-primary)] cursor-pointer"
+                  >
+                    ★ ({pieces.filter((p) => !p.myVote).length})
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  title="Spieler wechseln"
+                  className="type-kicker inline-flex items-center gap-1 border border-[var(--ink-primary)] bg-[var(--bg-paper)] px-2 py-1 text-[10px] text-[var(--ink-primary)] cursor-pointer"
+                >
+                  <span className="max-w-[72px] truncate font-bold">
+                    {currentUser.name}
+                  </span>
+                  <LogOut className="h-3 w-3 text-[var(--ink-secondary)]" />
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowLoginModal(true)}
+                className="type-kicker bg-[var(--accent)] px-2.5 py-1 text-[10px] text-[var(--accent-ink)] cursor-pointer"
+              >
+                ANMELDEN
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={handleExportBackup}
+              title="Backup exportieren"
+              className="border border-[var(--rule-border)] bg-[var(--bg-paper)] p-1.5 text-[var(--ink-secondary)] cursor-pointer"
+            >
+              <Download className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* DESKTOP 12-COLUMN MASTHEAD (>= 1024px) */}
+        <div className="mx-auto hidden max-w-[1440px] lg:block">
           <div className="grid grid-cols-1 lg:grid-cols-12">
             {/* Columns 1–7: Editorial Masthead & Live Ledger Metrics */}
             <div className="flex flex-col justify-between border-b border-[var(--rule-border)] px-4 py-4 sm:px-6 lg:col-span-7 lg:border-r lg:border-b-0">
@@ -340,13 +406,6 @@ export default function HomePage() {
                     <Upload className="h-3 w-3" />
                     IMPORT
                   </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="application/json"
-                    onChange={handleImportBackup}
-                    className="hidden"
-                  />
                 </div>
               </div>
 
@@ -407,10 +466,10 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Ledger Section Index Bar */}
+          {/* Desktop Ledger Section Index Bar */}
           <nav
-            aria-label="Hauptnavigation"
-            className="grid grid-cols-2 border-t border-[var(--rule-border)] bg-[var(--bg-surface)] sm:grid-cols-4"
+            aria-label="Hauptnavigation Desktop"
+            className="grid grid-cols-4 border-t border-[var(--rule-border)] bg-[var(--bg-surface)]"
           >
             {(
               [
@@ -447,7 +506,7 @@ export default function HomePage() {
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
-                  className={`ui-transition flex items-baseline justify-between border-r border-b sm:border-b-0 border-[var(--rule-border)] last:border-r-0 px-4 py-3 text-left cursor-pointer ${
+                  className={`ui-transition flex items-baseline justify-between border-r border-[var(--rule-border)] last:border-r-0 px-4 py-3 text-left cursor-pointer ${
                     active
                       ? "bg-[var(--bg-paper)] border-b-2 border-b-[var(--accent)]"
                       : "bg-[var(--bg-surface)] hover:bg-[var(--bg-recessed)]"
@@ -491,7 +550,7 @@ export default function HomePage() {
       </header>
 
       {/* Main Workspace Container */}
-      <main className="mx-auto max-w-[1440px] px-4 py-8 sm:px-6">
+      <main className="mx-auto max-w-[1440px] px-3 py-3 sm:px-6 lg:py-8">
         {loading ? (
           <div className="border border-[var(--rule-border)] bg-[var(--bg-surface)] p-12 text-center">
             <span className="type-kicker text-[var(--ink-secondary)]">
@@ -557,6 +616,83 @@ export default function HomePage() {
           </>
         )}
       </main>
+
+      {/* MOBILE FIXED BOTTOM TAB BAR (< 1024px) */}
+      <nav
+        aria-label="Mobile Hauptnavigation"
+        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t-2 border-[var(--rule-heavy)] bg-[var(--bg-surface)] lg:hidden"
+      >
+        {(
+          [
+            {
+              id: "repertoire",
+              num: "01",
+              shortLabel: "Repertoire",
+              count: pieces.length,
+            },
+            {
+              id: "probeplan",
+              num: "02",
+              shortLabel: "Probeplan",
+              count: upcomingSessionsCount,
+              badge: activeSession ? "LIVE" : undefined,
+            },
+            {
+              id: "kalender",
+              num: "03",
+              shortLabel: "Kalender",
+              count: sessions.length + concerts.length,
+            },
+            {
+              id: "historie",
+              num: "04",
+              shortLabel: "Protokolle",
+              count: completedSessionsCount,
+            },
+          ] as const
+        ).map((tab) => {
+          const active = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex flex-col items-center justify-center border-r border-[var(--rule-border)] last:border-r-0 px-1 py-2 text-center cursor-pointer ${
+                active
+                  ? "bg-[var(--ink-primary)] text-[var(--bg-surface)]"
+                  : "bg-[var(--bg-surface)] text-[var(--ink-secondary)]"
+              }`}
+            >
+              <div className="flex items-center gap-1">
+                <span
+                  className={`font-mono-tabular text-[10px] font-bold ${
+                    active ? "text-[var(--accent)]" : "text-[var(--ink-muted)]"
+                  }`}
+                >
+                  {tab.num}
+                </span>
+                <span className="truncate text-xs font-semibold">
+                  {tab.shortLabel}
+                </span>
+              </div>
+              <div className="mt-0.5 flex items-center gap-1">
+                {"badge" in tab && tab.badge && (
+                  <span className="font-mono-tabular bg-[var(--accent)] px-1 text-[9px] font-bold text-[var(--accent-ink)]">
+                    {tab.badge}
+                  </span>
+                )}
+                <span
+                  className={`font-mono-tabular text-[10px] ${
+                    active ? "opacity-80" : "text-[var(--ink-muted)]"
+                  }`}
+                >
+                  [{tab.count}]
+                </span>
+              </div>
+            </button>
+          );
+        })}
+      </nav>
 
       {/* Initial Rating Onboarding Modal */}
       {currentUser && (

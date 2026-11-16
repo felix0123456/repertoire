@@ -32,6 +32,7 @@ COPY --from=builder /app/prisma ./prisma
 
 # Ensure directories for SQLite persistent volume and uploads exist with permissions
 RUN mkdir -p .next /app/data /app/public/uploads
+COPY --from=builder /app/data/backup-latest.json /app/data/backup-latest.json
 
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static

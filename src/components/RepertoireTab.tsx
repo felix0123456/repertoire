@@ -70,6 +70,10 @@ export default function RepertoireTab({
     string | null
   >(null);
   const [savingVoteId, setSavingVoteId] = useState<string | null>(null);
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [openMobileVotePieceId, setOpenMobileVotePieceId] = useState<
+    string | null
+  >(null);
 
   // Form states
   const [title, setTitle] = useState("");
@@ -313,10 +317,69 @@ export default function RepertoireTab({
 
   return (
     /* Asymmetric 12-Column Grid: Columns 1–4 Sticky Filter Rail, Columns 5–12 Score Ledger */
-    <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-8">
       {/* Left Rail: Columns 1–4 */}
       <aside className="lg:col-span-4">
-        <div className="sticky top-36 space-y-5 border-t-2 border-[var(--rule-heavy)] bg-[var(--bg-surface)] p-5 border-x border-b border-x-[var(--rule-border)] border-b-[var(--rule-border)]">
+        {/* MOBILE COMPACT ACTION & SEARCH BAR (< 1024px) */}
+        <div className="mb-2 flex items-center gap-1.5 border border-[var(--ink-primary)] bg-[var(--bg-surface)] p-2 lg:hidden">
+          <div className="relative flex-1 min-w-0">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--ink-muted)]" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Stück, Sänger, Typ..."
+              className="w-full border border-[var(--rule-border)] bg-[var(--bg-paper)] py-1.5 pl-8 pr-2 text-xs text-[var(--ink-primary)] placeholder-[var(--ink-muted)] focus:border-[var(--ink-primary)] focus:outline-none"
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowMobileFilters((v) => !v)}
+            className={`type-kicker inline-flex shrink-0 items-center gap-1 border px-2.5 py-1.5 text-[10px] cursor-pointer ${
+              showMobileFilters
+                ? "border-[var(--ink-primary)] bg-[var(--ink-primary)] text-[var(--bg-surface)]"
+                : "border-[var(--rule-border)] bg-[var(--bg-recessed)] text-[var(--ink-primary)]"
+            }`}
+          >
+            FILTER
+            {showMobileFilters ? (
+              <ChevronUp className="h-3 w-3" />
+            ) : (
+              <ChevronDown className="h-3 w-3" />
+            )}
+          </button>
+
+          {onOpenOnboarding && pieces.length > 0 && (
+            <button
+              type="button"
+              onClick={onOpenOnboarding}
+              title="Bewertungs-Onboarding"
+              className="type-kicker shrink-0 border border-[var(--ink-primary)] bg-[var(--bg-paper)] px-2 py-1.5 text-[10px] font-bold text-[var(--ink-primary)] cursor-pointer"
+            >
+              ★{" "}
+              {currentUser
+                ? pieces.filter((p) => !p.myVote).length
+                : pieces.length}
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={openCreateModal}
+            className="type-kicker inline-flex shrink-0 items-center gap-1 bg-[var(--accent)] px-2.5 py-1.5 text-[10px] text-[var(--accent-ink)] cursor-pointer"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            NEU
+          </button>
+        </div>
+
+        {/* FULL FILTER PANEL (Collapsible on Mobile, Sticky on Desktop) */}
+        <div
+          className={`${
+            showMobileFilters ? "block" : "hidden"
+          } lg:block sticky top-36 space-y-5 border-t-2 border-[var(--rule-heavy)] bg-[var(--bg-surface)] p-4 sm:p-5 border-x border-b border-x-[var(--rule-border)] border-b-[var(--rule-border)]`}
+        >
           <div className="flex items-baseline justify-between border-b border-[var(--rule-border)] pb-3">
             <div>
               <div className="type-kicker text-[var(--ink-muted)]">
@@ -331,7 +394,7 @@ export default function RepertoireTab({
             </span>
           </div>
 
-          <div className="space-y-2">
+          <div className="hidden space-y-2 lg:block">
             <button
               type="button"
               onClick={openCreateModal}
@@ -357,8 +420,8 @@ export default function RepertoireTab({
             )}
           </div>
 
-          {/* Search */}
-          <div>
+          {/* Search (Desktop) */}
+          <div className="hidden lg:block">
             <label className="type-kicker mb-1.5 block text-[var(--ink-secondary)]">
               Volltextsuche
             </label>
@@ -539,6 +602,7 @@ export default function RepertoireTab({
             {filteredAndSortedPieces.map((piece, idx) => {
               const myVote = piece.myVote;
               const isExpanded = expandedVotesPieceId === piece.id;
+              const isMobileVoteOpen = openMobileVotePieceId === piece.id;
               const staggerIdx = Math.min(idx, 8);
 
               return (
@@ -547,27 +611,47 @@ export default function RepertoireTab({
                   style={
                     { "--stagger-index": staggerIdx } as React.CSSProperties
                   }
-                  className="stagger-item border-b border-[var(--rule-border)] last:border-b-0 p-5 sm:p-6"
+                  className="stagger-item border-b border-[var(--rule-border)] last:border-b-0 p-3 sm:p-6"
                 >
                   {/* Top Row: Index Number, Title, Tags, Actions */}
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="flex items-baseline gap-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-baseline gap-2.5 min-w-0">
                       <span className="font-mono-tabular text-xs font-semibold text-[var(--ink-muted)]">
                         {String(idx + 1).padStart(2, "0")}
                       </span>
-                      <div>
-                        <div className="flex flex-wrap items-baseline gap-2.5">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-baseline gap-2">
                           <h3 className="type-piece-h3 text-[var(--ink-primary)]">
                             {piece.title}
                           </h3>
                           {piece.artist && (
-                            <span className="text-sm text-[var(--ink-secondary)]">
+                            <span className="hidden text-xs text-[var(--ink-secondary)] sm:inline">
                               — {piece.artist}
                             </span>
                           )}
                         </div>
 
-                        <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                        {/* Compact Mobile Inline Meta (< 640px) */}
+                        <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--ink-secondary)] sm:hidden">
+                          {piece.folderNumber && (
+                            <span className="font-mono-tabular border border-[var(--ink-primary)] bg-[var(--ink-primary)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--bg-surface)]">
+                              #{piece.folderNumber}
+                            </span>
+                          )}
+                          <span className="font-semibold text-[var(--ink-primary)]">
+                            {piece.singers || "Instr."}
+                          </span>
+                          {piece.songType && <span>• {piece.songType}</span>}
+                          {piece.soloists && (
+                            <span>• Solo: {piece.soloists}</span>
+                          )}
+                          <span className="font-mono-tabular text-[10px] text-[var(--ink-muted)]">
+                            • Prio {piece.priorityScore.toFixed(1)}
+                          </span>
+                        </div>
+
+                        {/* Desktop Tags (>= 640px) */}
+                        <div className="mt-1.5 hidden flex-wrap items-center gap-2 sm:flex">
                           {piece.folderNumber && (
                             <span className="type-kicker border border-[var(--ink-primary)] bg-[var(--ink-primary)] px-2 py-0.5 text-[var(--bg-surface)]">
                               MAPPE NR. {piece.folderNumber}
@@ -588,18 +672,44 @@ export default function RepertoireTab({
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-1.5 self-end sm:self-start">
+                    <div className="flex shrink-0 items-center gap-1">
+                      {/* Mobile Toggle Vote Button (< 768px) */}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setOpenMobileVotePieceId(
+                            isMobileVoteOpen ? null : piece.id
+                          )
+                        }
+                        className={`type-kicker inline-flex items-center gap-1 border px-2 py-1 text-[10px] md:hidden cursor-pointer ${
+                          myVote
+                            ? "border-[var(--ink-primary)] bg-[var(--bg-recessed)] text-[var(--ink-primary)]"
+                            : "border-[var(--accent)] bg-[var(--bg-surface)] text-[var(--accent)]"
+                        }`}
+                      >
+                        {myVote
+                          ? `♥${myVote.likeScore} S${myVote.confidenceScore} Ü${myVote.practiceNeededScore}`
+                          : "BEWERTEN"}
+                        {isMobileVoteOpen ? (
+                          <ChevronUp className="h-3 w-3" />
+                        ) : (
+                          <ChevronDown className="h-3 w-3" />
+                        )}
+                      </button>
+
                       <button
                         type="button"
                         onClick={() => openEditModal(piece)}
-                        className="type-kicker inline-flex items-center gap-1 border border-[var(--rule-border)] bg-[var(--bg-paper)] px-2.5 py-1.5 text-[var(--ink-secondary)] hover:border-[var(--ink-primary)] hover:text-[var(--ink-primary)] cursor-pointer"
+                        className="type-kicker inline-flex items-center gap-1 border border-[var(--rule-border)] bg-[var(--bg-paper)] px-2 py-1 text-[var(--ink-secondary)] hover:border-[var(--ink-primary)] hover:text-[var(--ink-primary)] cursor-pointer"
+                        title="Stück bearbeiten"
                       >
-                        <Edit3 className="h-3.5 w-3.5" /> BEARBEITEN
+                        <Edit3 className="h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">BEARBEITEN</span>
                       </button>
                       <button
                         type="button"
                         onClick={() => handleDeletePiece(piece)}
-                        className="border border-[var(--rule-border)] bg-[var(--bg-paper)] p-1.5 text-[var(--ink-secondary)] hover:border-[var(--accent)] hover:text-[var(--accent)] cursor-pointer"
+                        className="border border-[var(--rule-border)] bg-[var(--bg-paper)] p-1 text-[var(--ink-secondary)] hover:border-[var(--accent)] hover:text-[var(--accent)] cursor-pointer"
                         title="Stück löschen"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -607,8 +717,8 @@ export default function RepertoireTab({
                     </div>
                   </div>
 
-                  {/* Metadata Grid: Folder Number, Singers, Soloists, Last Practiced */}
-                  <div className="mt-4 grid grid-cols-2 gap-px border border-[var(--rule-border)] bg-[var(--rule-border)] sm:grid-cols-4">
+                  {/* Metadata Grid: Hidden on mobile unless expanded, visible on >= 640px */}
+                  <div className="mt-4 hidden grid-cols-2 gap-px border border-[var(--rule-border)] bg-[var(--rule-border)] sm:grid sm:grid-cols-4">
                     <div className="bg-[var(--bg-paper)] px-3 py-2">
                       <div className="type-kicker text-[var(--ink-muted)]">
                         NUMMER IN DER MAPPE
@@ -648,13 +758,17 @@ export default function RepertoireTab({
                   </div>
 
                   {piece.notes && (
-                    <div className="mt-3 border-l-2 border-[var(--ink-primary)] pl-3 text-sm text-[var(--ink-secondary)]">
+                    <div className="mt-2 hidden border-l-2 border-[var(--ink-primary)] pl-3 text-sm text-[var(--ink-secondary)] sm:block">
                       {piece.notes}
                     </div>
                   )}
 
-                  {/* Ensemble Averages vs Personal 1–5 Voting */}
-                  <div className="mt-4 grid grid-cols-1 gap-4 border-t border-[var(--rule-border)] pt-4 md:grid-cols-12">
+                  {/* Ensemble Averages vs Personal 1–5 Voting (Collapsible on Mobile, Visible on Desktop) */}
+                  <div
+                    className={`${
+                      isMobileVoteOpen ? "grid" : "hidden"
+                    } mt-3 grid-cols-1 gap-3 border-t border-[var(--rule-border)] pt-3 md:mt-4 md:grid md:grid-cols-12 md:gap-4 md:pt-4`}
+                  >
                     {/* Band Averages (Cols 1-4) */}
                     <div className="flex flex-col justify-between border border-[var(--rule-border)] bg-[var(--bg-recessed)] p-3 md:col-span-4">
                       <div className="flex items-center justify-between">

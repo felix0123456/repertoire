@@ -18,15 +18,15 @@ interface TerminkalenderTabProps {
 
 type CalendarEntry =
   | {
-      kind: "CONCERT";
-      dateMs: number;
-      concert: ConcertEventItem;
-    }
+    kind: "CONCERT";
+    dateMs: number;
+    concert: ConcertEventItem;
+  }
   | {
-      kind: "REHEARSAL";
-      dateMs: number;
-      session: RehearsalSessionItem;
-    };
+    kind: "REHEARSAL";
+    dateMs: number;
+    session: RehearsalSessionItem;
+  };
 
 export default function TerminkalenderTab({
   sessions,
@@ -199,10 +199,29 @@ export default function TerminkalenderTab({
 
   return (
     /* Asymmetric 12-Column Grid: Columns 1–4 Calendar Action & Concert Spotlight, Columns 5–12 Chronological Ledger */
-    <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-8">
       {/* Left Rail: Columns 1–4 */}
       <aside className="lg:col-span-4">
-        <div className="sticky top-36 space-y-5 border-t-2 border-[var(--rule-heavy)] bg-[var(--bg-surface)] p-5 border-x border-b border-x-[var(--rule-border)] border-b-[var(--rule-border)]">
+        {/* MOBILE COMPACT ACTION BAR (< 1024px) */}
+        <div className="grid grid-cols-2 gap-2 border border-[var(--ink-primary)] bg-[var(--bg-surface)] p-2 lg:hidden">
+          <button
+            type="button"
+            onClick={openCreateConcert}
+            className="type-kicker inline-flex items-center justify-center gap-1 bg-[var(--accent)] px-2.5 py-2 text-[10px] text-[var(--accent-ink)] cursor-pointer"
+          >
+            <Plus className="h-3.5 w-3.5" /> AUFTRITT PLANEN
+          </button>
+          <button
+            type="button"
+            onClick={openCreateRehearsal}
+            className="type-kicker inline-flex items-center justify-center gap-1 border border-[var(--ink-primary)] bg-[var(--bg-paper)] px-2.5 py-2 text-[10px] text-[var(--ink-primary)] cursor-pointer"
+          >
+            <Plus className="h-3.5 w-3.5" /> PROBETERMIN
+          </button>
+        </div>
+
+        {/* DESKTOP SIDEBAR (>= 1024px) */}
+        <div className="hidden lg:block sticky top-36 space-y-5 border-t-2 border-[var(--rule-heavy)] bg-[var(--bg-surface)] p-5 border-x border-b border-x-[var(--rule-border)] border-b-[var(--rule-border)]">
           <div className="border-b border-[var(--rule-border)] pb-3">
             <div className="type-kicker text-[var(--ink-muted)]">
               ZEITPLAN & DISPOSITION
@@ -307,16 +326,16 @@ export default function TerminkalenderTab({
                           <strong className="text-[var(--ink-primary)]">
                             {c.scheduledDate
                               ? new Date(c.scheduledDate).toLocaleString(
-                                  "de-DE",
-                                  {
-                                    weekday: "long",
-                                    day: "2-digit",
-                                    month: "2-digit",
-                                    year: "numeric",
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  }
-                                )
+                                "de-DE",
+                                {
+                                  weekday: "long",
+                                  day: "2-digit",
+                                  month: "2-digit",
+                                  year: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                }
+                              )
                               : "Datum noch offen"}
                           </strong>
                         </span>
@@ -399,16 +418,16 @@ export default function TerminkalenderTab({
                         <strong className="text-[var(--ink-primary)]">
                           {s.scheduledDate
                             ? new Date(s.scheduledDate).toLocaleString(
-                                "de-DE",
-                                {
-                                  weekday: "long",
-                                  day: "2-digit",
-                                  month: "2-digit",
-                                  year: "numeric",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                }
-                              )
+                              "de-DE",
+                              {
+                                weekday: "long",
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              }
+                            )
                             : "Flexibler Termin (ohne festes Datum)"}
                         </strong>
                       </span>
@@ -637,11 +656,10 @@ export default function TerminkalenderTab({
                                 : [...prev, s]
                             )
                           }
-                          className={`border px-2.5 py-1 text-xs font-medium cursor-pointer ${
-                            active
-                              ? "border-[var(--ink-primary)] bg-[var(--ink-primary)] text-[var(--bg-surface)]"
-                              : "border-[var(--rule-border)] bg-[var(--bg-paper)] text-[var(--ink-secondary)]"
-                          }`}
+                          className={`border px-2.5 py-1 text-xs font-medium cursor-pointer ${active
+                            ? "border-[var(--ink-primary)] bg-[var(--ink-primary)] text-[var(--bg-surface)]"
+                            : "border-[var(--rule-border)] bg-[var(--bg-paper)] text-[var(--ink-secondary)]"
+                            }`}
                         >
                           {active ? "✓ " : ""}
                           {s}
@@ -671,11 +689,10 @@ export default function TerminkalenderTab({
                                 : [...prev, s]
                             )
                           }
-                          className={`border px-2.5 py-1 text-xs font-medium cursor-pointer ${
-                            active
-                              ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-ink)]"
-                              : "border-[var(--rule-border)] bg-[var(--bg-paper)] text-[var(--ink-secondary)]"
-                          }`}
+                          className={`border px-2.5 py-1 text-xs font-medium cursor-pointer ${active
+                            ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-ink)]"
+                            : "border-[var(--rule-border)] bg-[var(--bg-paper)] text-[var(--ink-secondary)]"
+                            }`}
                         >
                           {active ? "✕ Abwesend: " : ""}
                           {s}
