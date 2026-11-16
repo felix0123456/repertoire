@@ -965,7 +965,7 @@ export default function ProbeplanTab({
                                           className="font-mono-tabular inline-flex items-center gap-1 border border-[var(--ink-primary)] bg-[var(--bg-surface)] px-2 py-0.5 text-[11px] text-[var(--ink-primary)]"
                                         >
                                           <Check className="h-3 w-3" />
-                                          {l.userName}: Sicherheit{" "}
+                                          {l.userName}: Schwierigkeit{" "}
                                           {l.prevConfidence}→{l.newConfidence},
                                           Übung {l.prevPracticeNeeded}→
                                           {l.newPracticeNeeded}
@@ -1026,7 +1026,7 @@ export default function ProbeplanTab({
 
                                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                   <ScoreSelector
-                                    label="Neue Sicherheit (1 = unsicher, 5 = sicher)"
+                                    label="Schwierigkeit (1 = leicht, 5 = sehr schwer)"
                                     value={logConfidence}
                                     onChange={setLogConfidence}
                                   />

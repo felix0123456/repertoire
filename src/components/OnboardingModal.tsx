@@ -355,7 +355,7 @@ export default function OnboardingModal({
                         🎚 VOLLES RATING (1–5)
                       </span>
                       <span className="mt-1 text-[11px] leading-snug opacity-85">
-                        Einzelne Skalen (1–5) für Beliebtheit, Sicherheit &
+                        Einzelne Skalen (1–5) für Beliebtheit, Schwierigkeit &
                         Übungsbedarf pro Stück
                       </span>
                     </button>
@@ -618,7 +618,7 @@ export default function OnboardingModal({
                       </div>
                       {currentPiece.myVote ? (
                         <span className="type-kicker bg-[var(--ink-primary)] px-1.5 py-0.5 text-[10px] text-[var(--bg-surface)]">
-                          ✓ BEWERTET (♥{currentPiece.myVote.likeScore} • S
+                          ✓ BEWERTET (♥{currentPiece.myVote.likeScore} • Schw.
                           {currentPiece.myVote.confidenceScore} • Ü
                           {currentPiece.myVote.practiceNeededScore})
                         </span>
@@ -676,7 +676,7 @@ export default function OnboardingModal({
                           type="button"
                           disabled={savingId === currentPiece.id}
                           onClick={() =>
-                            submitVoteAndAdvance(currentPiece, 4, 5, 1, true)
+                            submitVoteAndAdvance(currentPiece, 4, 2, 1, true)
                           }
                           className="ui-transition flex items-center justify-between border-2 border-[var(--ink-primary)] bg-[var(--bg-surface)] px-4 py-3.5 text-left hover:bg-[var(--ink-primary)] hover:text-[var(--bg-surface)] cursor-pointer"
                         >
@@ -685,7 +685,7 @@ export default function OnboardingModal({
                               ✓ SITZT SICHER & GEFÄLLT MIR
                             </div>
                             <div className="font-mono-tabular mt-0.5 text-[11px] opacity-75">
-                              Sicherheit 5 • Übungsbedarf 1 • Beliebtheit 4
+                              Schwierigkeit 2 • Übungsbedarf 1 • Beliebtheit 4
                             </div>
                           </div>
                           <ChevronRight className="h-4 w-4 shrink-0" />
@@ -704,7 +704,7 @@ export default function OnboardingModal({
                               ~ SOLIDE / MITTELMASS
                             </div>
                             <div className="font-mono-tabular mt-0.5 text-[11px] opacity-75">
-                              Sicherheit 3 • Übungsbedarf 3 • Beliebtheit 3
+                              Schwierigkeit 3 • Übungsbedarf 3 • Beliebtheit 3
                             </div>
                           </div>
                           <ChevronRight className="h-4 w-4 shrink-0" />
@@ -714,7 +714,7 @@ export default function OnboardingModal({
                           type="button"
                           disabled={savingId === currentPiece.id}
                           onClick={() =>
-                            submitVoteAndAdvance(currentPiece, 4, 2, 5, true)
+                            submitVoteAndAdvance(currentPiece, 4, 4, 5, true)
                           }
                           className="ui-transition flex items-center justify-between border-2 border-[var(--accent)] bg-[var(--bg-surface)] px-4 py-3.5 text-left text-[var(--accent)] hover:bg-[var(--accent)] hover:text-[var(--accent-ink)] cursor-pointer"
                         >
@@ -723,7 +723,7 @@ export default function OnboardingModal({
                               ! BRAUCHT DRINGEND PROBE
                             </div>
                             <div className="font-mono-tabular mt-0.5 text-[11px] opacity-85">
-                              Sicherheit 2 • Übungsbedarf 5 • Beliebtheit 4
+                              Schwierigkeit 4 • Übungsbedarf 5 • Beliebtheit 4
                             </div>
                           </div>
                           <ChevronRight className="h-4 w-4 shrink-0" />
@@ -758,8 +758,8 @@ export default function OnboardingModal({
                         disabled={savingId === currentPiece.id}
                       />
                       <ScoreSelector
-                        label="2. Eigene Sicherheit"
-                        hint="1 = Unsicher • 5 = Sitzt sicher"
+                        label="2. Schwierigkeit"
+                        hint="1 = Leicht • 5 = Sehr schwer"
                         value={draftConfidence}
                         onChange={setDraftConfidence}
                         disabled={savingId === currentPiece.id}
@@ -887,7 +887,7 @@ export default function OnboardingModal({
                         BELIEBT (1–5)
                       </th>
                       <th className="type-kicker px-2.5 py-2 text-[var(--ink-secondary)]">
-                        SICHER (1–5)
+                        SCHWIERIG (1–5)
                       </th>
                       <th className="type-kicker px-2.5 py-2 text-[var(--ink-secondary)]">
                         ÜBUNG (1–5)
@@ -933,7 +933,7 @@ export default function OnboardingModal({
                                 type="button"
                                 disabled={isSaving}
                                 onClick={() =>
-                                  submitVoteAndAdvance(piece, 4, 5, 1, false)
+                                  submitVoteAndAdvance(piece, 4, 2, 1, false)
                                 }
                                 className="type-kicker border border-[var(--ink-primary)] bg-[var(--bg-surface)] px-1.5 py-1 text-[10px] cursor-pointer"
                               >
@@ -943,7 +943,7 @@ export default function OnboardingModal({
                                 type="button"
                                 disabled={isSaving}
                                 onClick={() =>
-                                  submitVoteAndAdvance(piece, 4, 2, 5, false)
+                                  submitVoteAndAdvance(piece, 4, 4, 5, false)
                                 }
                                 className="type-kicker border border-[var(--accent)] bg-[var(--bg-surface)] px-1.5 py-1 text-[10px] text-[var(--accent)] cursor-pointer"
                               >

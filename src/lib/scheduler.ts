@@ -102,10 +102,10 @@ export function calculatePiecePriority(
       ? 0.5
       : 1.0;
 
-  // S(p) = 3.0 * avgPracticeNeeded + 2.5 * (6 - avgConfidence) + 2.0 * timeFactor + 1.0 * diffBonus
+  // S(p) = 3.0 * avgPracticeNeeded + 2.5 * avgConfidence (Schwierigkeit 1-5) + 2.0 * timeFactor + 1.0 * diffBonus
   const rawScore =
     3.0 * avgPracticeNeeded +
-    2.5 * (6 - avgConfidence) +
+    2.5 * avgConfidence +
     2.0 * timeFactor +
     1.0 * diffBonus;
 
@@ -115,8 +115,8 @@ export function calculatePiecePriority(
   if (avgPracticeNeeded >= 3.8) {
     reasons.push(`Hoher Übungsbedarf (Ø ${avgPracticeNeeded.toFixed(1)})`);
   }
-  if (avgConfidence <= 2.6) {
-    reasons.push(`Wenig Sicherheit (Ø ${avgConfidence.toFixed(1)})`);
+  if (avgConfidence >= 3.6) {
+    reasons.push(`Hohe Schwierigkeit (Ø ${avgConfidence.toFixed(1)})`);
   }
   if (daysSince === null) {
     reasons.push("Noch nie geprobt");

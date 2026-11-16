@@ -468,8 +468,8 @@ export default function RepertoireTab({
                 <option value="folderNumber">Nummer in der Mappe</option>
                 <option value="like">Beliebtheit (Favoriten)</option>
                 <option value="practice">Übungsbedarf</option>
-                <option value="confidence">Sicherheit</option>
-                <option value="difficulty">Schwierigkeit</option>
+                <option value="confidence">Schwierigkeit (Bewertung 1–5)</option>
+                <option value="difficulty">Schwierigkeitsstufe (Leicht–Schwer)</option>
                 <option value="singer">Sänger (A–Z)</option>
                 <option value="soloist">Solist (A–Z)</option>
                 <option value="songType">Song-Typ (A–Z)</option>
@@ -688,7 +688,7 @@ export default function RepertoireTab({
                         }`}
                       >
                         {myVote
-                          ? `♥${myVote.likeScore} S${myVote.confidenceScore} Ü${myVote.practiceNeededScore}`
+                          ? `♥${myVote.likeScore} Schw.${myVote.confidenceScore} Ü${myVote.practiceNeededScore}`
                           : "BEWERTEN"}
                         {isMobileVoteOpen ? (
                           <ChevronUp className="h-3 w-3" />
@@ -804,7 +804,7 @@ export default function RepertoireTab({
                         </div>
                         <div className="bg-[var(--bg-surface)] p-1.5 border border-[var(--rule-border)]">
                           <div className="text-[10px] text-[var(--ink-muted)]">
-                            SICHER
+                            SCHWIERIG
                           </div>
                           <div className="text-sm font-bold text-[var(--ink-primary)]">
                             {piece.avgConfidence.toFixed(1)}
@@ -844,7 +844,7 @@ export default function RepertoireTab({
                           disabled={savingVoteId === piece.id}
                         />
                         <ScoreSelector
-                          label="Sicherheit"
+                          label="Schwierigkeit"
                           value={myVote?.confidenceScore ?? 0}
                           onChange={(val) =>
                             handleVote(piece, "confidenceScore", val)
@@ -885,7 +885,7 @@ export default function RepertoireTab({
                               </span>
                               <div className="font-mono-tabular flex items-center gap-4 text-[var(--ink-secondary)]">
                                 <span>Gefällt: {v.likeScore}/5</span>
-                                <span>Sicherheit: {v.confidenceScore}/5</span>
+                                <span>Schwierigkeit: {v.confidenceScore}/5</span>
                                 <span>
                                   Übungsbedarf: {v.practiceNeededScore}/5
                                 </span>
@@ -1026,7 +1026,7 @@ export default function RepertoireTab({
                       onChange={setInitLike}
                     />
                     <ScoreSelector
-                      label="Sicherheit"
+                      label="Schwierigkeit"
                       value={initConfidence}
                       onChange={setInitConfidence}
                     />

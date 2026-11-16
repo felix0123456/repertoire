@@ -151,7 +151,7 @@ export default function HistorieTab({
                         </div>
                         <div className="font-mono-tabular flex items-center gap-4 text-[var(--ink-secondary)]">
                           <span>
-                            Sicherheit: {l.prevConfidence} →{" "}
+                            Schwierigkeit: {l.prevConfidence} →{" "}
                             <strong className="text-[var(--ink-primary)]">
                               {l.newConfidence}/5
                             </strong>
