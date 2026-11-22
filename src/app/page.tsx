@@ -78,6 +78,16 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  // Deep-link focus states (?tab=...&session=...&proposal=...&piece=...&onboarding=1)
+  const [focusedSessionId, setFocusedSessionId] = useState<string | null>(null);
+  const [focusedProposalId, setFocusedProposalId] = useState<string | null>(
+    null
+  );
+  const [initialProposalSubTab, setInitialProposalSubTab] = useState<
+    "swipe" | "results" | null
+  >(null);
+  const [focusedPieceId, setFocusedPieceId] = useState<string | null>(null);
+
   const fetchAllData = useCallback(
     async (
       overrideUserId?: string,
@@ -136,6 +146,50 @@ export default function HomePage() {
   useEffect(() => {
     let mounted = true;
     async function initSession() {
+      let requestedOnboarding = false;
+      let requestedSessionId: string | null = null;
+
+      try {
+        if (typeof window !== "undefined") {
+          const params = new URLSearchParams(window.location.search);
+          const tabParam = params.get("tab");
+          const sessionParam = params.get("session");
+          const proposalParam = params.get("proposal");
+          const viewParam = params.get("view");
+          const onboardingParam = params.get("onboarding");
+          const pieceParam = params.get("piece");
+
+          if (viewParam === "swipe" || viewParam === "results") {
+            setInitialProposalSubTab(viewParam);
+          }
+
+          if (sessionParam) {
+            requestedSessionId = sessionParam;
+            setFocusedSessionId(sessionParam);
+            setActiveTab(tabParam === "historie" ? "historie" : "probeplan");
+          } else if (proposalParam) {
+            setFocusedProposalId(proposalParam);
+            setActiveTab("vorschlaege");
+          } else if (pieceParam) {
+            setFocusedPieceId(pieceParam);
+            setActiveTab("repertoire");
+          } else if (onboardingParam === "1" || onboardingParam === "true") {
+            requestedOnboarding = true;
+            setActiveTab("repertoire");
+          } else if (
+            tabParam === "repertoire" ||
+            tabParam === "probeplan" ||
+            tabParam === "kalender" ||
+            tabParam === "historie" ||
+            tabParam === "vorschlaege"
+          ) {
+            setActiveTab(tabParam);
+          }
+        }
+      } catch {
+        // ignore URL parse errors
+      }
+
       try {
         const saved = localStorage.getItem(STORAGE_USER_KEY);
         if (saved) {
@@ -155,13 +209,29 @@ export default function HomePage() {
                   STORAGE_USER_KEY,
                   JSON.stringify(uData.user)
                 );
-                await fetchAllData(uData.user.id, uData.user.name);
+                const loadedPieces = await fetchAllData(
+                  uData.user.id,
+                  uData.user.name
+                );
+                if (
+                  mounted &&
+                  requestedOnboarding &&
+                  loadedPieces.length > 0
+                ) {
+                  setShowOnboardingModal(true);
+                }
                 return;
               }
             }
             if (mounted) {
               setCurrentUser(parsed);
-              await fetchAllData(parsed.id || "", parsed.name);
+              const loadedPieces = await fetchAllData(
+                parsed.id || "",
+                parsed.name
+              );
+              if (mounted && requestedOnboarding && loadedPieces.length > 0) {
+                setShowOnboardingModal(true);
+              }
               return;
             }
           }
@@ -171,7 +241,14 @@ export default function HomePage() {
       }
       if (mounted) {
         await fetchAllData("", "");
+        if (mounted && requestedOnboarding) {
+          setPendingOnboarding(true);
+          setShowLoginModal(true);
+        }
       }
+
+      // Unused guard for requestedSessionId handled below via sessions effect
+      void requestedSessionId;
     }
     initSession();
     return () => {
@@ -179,6 +256,51 @@ export default function HomePage() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleTabChange = useCallback(
+    (
+      nextTab:
+        | "repertoire"
+        | "probeplan"
+        | "kalender"
+        | "historie"
+        | "vorschlaege"
+    ) => {
+      setActiveTab(nextTab);
+      setFocusedSessionId(null);
+      setFocusedProposalId(null);
+      setFocusedPieceId(null);
+      try {
+        if (typeof window !== "undefined" && window.history?.replaceState) {
+          const url = new URL(window.location.href);
+          url.search = "";
+          url.searchParams.set("tab", nextTab);
+          window.history.replaceState(null, "", url.toString());
+        }
+      } catch {
+        // ignore history errors
+      }
+    },
+    []
+  );
+
+  // If a deep-linked session turns out to be COMPLETED, switch to "historie" tab automatically
+  useEffect(() => {
+    if (!focusedSessionId || sessions.length === 0) return;
+    const normalized = String(focusedSessionId).trim().replace(/^#/, "");
+    const numeric = Number(normalized);
+    const matched = sessions.find(
+      (s) =>
+        s.id === normalized ||
+        String(s.sessionNumber) === normalized ||
+        (!Number.isNaN(numeric) &&
+          normalized !== "" &&
+          s.sessionNumber === numeric)
+    );
+    if (matched && matched.status === "COMPLETED" && activeTab === "probeplan") {
+      setActiveTab("historie");
+    }
+  }, [focusedSessionId, sessions, activeTab]);
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -532,7 +654,7 @@ export default function HomePage() {
                 <button
                   key={tab.id}
                   type="button"
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => handleTabChange(tab.id)}
                   className={`ui-transition flex items-baseline justify-between border-r border-[var(--rule-border)] last:border-r-0 px-4 py-3 text-left cursor-pointer ${
                     active
                       ? "bg-[var(--bg-paper)] border-b-2 border-b-[var(--accent)]"
@@ -603,6 +725,8 @@ export default function HomePage() {
                     setShowLoginModal(true);
                   }
                 }}
+                focusedPieceId={focusedPieceId}
+                onClearFocusedPiece={() => setFocusedPieceId(null)}
               />
             )}
 
@@ -617,6 +741,8 @@ export default function HomePage() {
                   await fetchAllData();
                 }}
                 onRequireLogin={() => setShowLoginModal(true)}
+                focusedSessionId={focusedSessionId}
+                onClearFocusedSession={() => setFocusedSessionId(null)}
               />
             )}
 
@@ -628,7 +754,17 @@ export default function HomePage() {
                 onRefresh={async () => {
                   await fetchAllData();
                 }}
-                onOpenProbeplan={() => setActiveTab("probeplan")}
+                onOpenProbeplan={(sessionId) => {
+                  if (sessionId) {
+                    setFocusedSessionId(sessionId);
+                    const target = sessions.find((s) => s.id === sessionId);
+                    if (target?.status === "COMPLETED") {
+                      setActiveTab("historie");
+                      return;
+                    }
+                  }
+                  setActiveTab("probeplan");
+                }}
               />
             )}
 
@@ -638,6 +774,8 @@ export default function HomePage() {
                 onRefresh={async () => {
                   await fetchAllData();
                 }}
+                focusedSessionId={focusedSessionId}
+                onClearFocusedSession={() => setFocusedSessionId(null)}
               />
             )}
 
@@ -650,6 +788,9 @@ export default function HomePage() {
                   await fetchAllData();
                 }}
                 onRequireLogin={() => setShowLoginModal(true)}
+                focusedProposalId={focusedProposalId}
+                initialSubTab={initialProposalSubTab}
+                onClearFocusedProposal={() => setFocusedProposalId(null)}
               />
             )}
           </>
@@ -703,7 +844,7 @@ export default function HomePage() {
             <button
               key={tab.id}
               type="button"
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleTabChange(tab.id)}
               className={`flex flex-col items-center justify-center border-r border-[var(--rule-border)] last:border-r-0 px-1 py-2 text-center cursor-pointer ${
                 active
                   ? "bg-[var(--ink-primary)] text-[var(--bg-surface)]"

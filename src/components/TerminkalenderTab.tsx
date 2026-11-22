@@ -1,19 +1,29 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Plus, Edit3, Trash2, ArrowRight } from "lucide-react";
+import {
+  Plus,
+  Edit3,
+  Trash2,
+  ArrowRight,
+  QrCode,
+  Share2,
+  Check,
+} from "lucide-react";
 import {
   ConcertEventItem,
   RehearsalSessionItem,
   SuggestionsData,
 } from "@/types";
+import SessionQrModal from "./SessionQrModal";
+import { buildAppShareUrl, shareOrCopyLink } from "@/lib/share";
 
 interface TerminkalenderTabProps {
   sessions: RehearsalSessionItem[];
   concerts: ConcertEventItem[];
   suggestions: SuggestionsData;
   onRefresh: () => Promise<void>;
-  onOpenProbeplan: () => void;
+  onOpenProbeplan: (sessionId?: string) => void;
 }
 
 type CalendarEntry =
@@ -52,6 +62,27 @@ export default function TerminkalenderTab({
   const [rehInfo, setRehInfo] = useState("");
   const [rehPresentSingers, setRehPresentSingers] = useState<string[]>([]);
   const [rehAbsentSoloists, setRehAbsentSoloists] = useState<string[]>([]);
+
+  const [qrModalSession, setQrModalSession] =
+    useState<RehearsalSessionItem | null>(null);
+  const [copiedSessionId, setCopiedSessionId] = useState<string | null>(null);
+
+  const handleShareRehearsalLink = async (s: RehearsalSessionItem) => {
+    const url = buildAppShareUrl({
+      tab: s.status === "COMPLETED" ? "historie" : "probeplan",
+      session: s.id,
+    });
+    const res = await shareOrCopyLink({
+      url,
+      title: `Probe #${String(s.sessionNumber).padStart(2, "0")}: ${s.title}`,
+    });
+    if (res === "copied" || res === "shared") {
+      setCopiedSessionId(s.id);
+      setTimeout(() => {
+        setCopiedSessionId((prev) => (prev === s.id ? null : prev));
+      }, 2400);
+    }
+  };
 
   const openCreateConcert = () => {
     setEditingConcert(null);
@@ -470,6 +501,34 @@ export default function TerminkalenderTab({
                   <div className="flex flex-wrap items-center gap-1.5 self-end sm:self-start">
                     <button
                       type="button"
+                      onClick={() => setQrModalSession(s)}
+                      title="QR-Code & Direktlink für diese Probe öffnen"
+                      className="type-kicker inline-flex items-center gap-1 border border-[var(--ink-primary)] bg-[var(--bg-recessed)] px-2.5 py-1.5 font-bold text-[var(--ink-primary)] hover:bg-[var(--ink-primary)] hover:text-[var(--bg-surface)] cursor-pointer"
+                    >
+                      <QrCode className="h-3.5 w-3.5" /> QR-CODE
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleShareRehearsalLink(s)}
+                      title="Direktlink zu dieser Probe kopieren"
+                      className={`type-kicker inline-flex items-center gap-1 border px-2.5 py-1.5 cursor-pointer ${
+                        copiedSessionId === s.id
+                          ? "border-[var(--ink-primary)] bg-[var(--ink-primary)] font-bold text-[var(--bg-surface)]"
+                          : "border-[var(--rule-border)] bg-[var(--bg-paper)] text-[var(--ink-primary)] hover:border-[var(--ink-primary)]"
+                      }`}
+                    >
+                      {copiedSessionId === s.id ? (
+                        <>
+                          <Check className="h-3.5 w-3.5" /> KOPIERT!
+                        </>
+                      ) : (
+                        <>
+                          <Share2 className="h-3.5 w-3.5" /> TEILEN
+                        </>
+                      )}
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => openEditRehearsal(s)}
                       className="type-kicker inline-flex items-center gap-1 border border-[var(--rule-border)] bg-[var(--bg-paper)] px-2.5 py-1.5 text-[var(--ink-primary)] hover:border-[var(--ink-primary)] cursor-pointer"
                     >
@@ -477,10 +536,13 @@ export default function TerminkalenderTab({
                     </button>
                     <button
                       type="button"
-                      onClick={onOpenProbeplan}
+                      onClick={() => onOpenProbeplan(s.id)}
                       className="type-kicker inline-flex items-center gap-1 bg-[var(--ink-primary)] px-3 py-1.5 text-[var(--bg-surface)] hover:bg-[var(--accent)] cursor-pointer"
                     >
-                      ZUM PROBEPLAN <ArrowRight className="h-3.5 w-3.5" />
+                      {s.status === "COMPLETED"
+                        ? "ZUM PROTOKOLL"
+                        : "ZUM PROBEPLAN"}{" "}
+                      <ArrowRight className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 </div>
@@ -722,6 +784,12 @@ export default function TerminkalenderTab({
           </div>
         </div>
       )}
+
+      {/* Modal: Share Rehearsal Session via Direct Link & QR Code */}
+      <SessionQrModal
+        session={qrModalSession}
+        onClose={() => setQrModalSession(null)}
+      />
     </div>
   );
 }

@@ -11,9 +11,11 @@ import {
   Sparkles,
   Layers,
   List,
+  Share2,
 } from "lucide-react";
 import { PieceItem, SuggestionsData } from "@/types";
 import ScoreSelector from "./ScoreSelector";
+import { buildAppShareUrl, shareOrCopyLink } from "@/lib/share";
 
 interface OnboardingModalProps {
   isOpen: boolean;
@@ -56,6 +58,24 @@ export default function OnboardingModal({
   const [skippedIds, setSkippedIds] = useState<string[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [copiedOnboardingLink, setCopiedOnboardingLink] =
+    useState<boolean>(false);
+
+  const handleShareOnboarding = async () => {
+    const url = buildAppShareUrl({
+      tab: "repertoire",
+      onboarding: "1",
+    });
+    const res = await shareOrCopyLink({
+      url,
+      title: "Repertoire-Abstimmung & Bewertungs-Onboarding",
+      text: "Bewerte hier unser Repertoire (Schwierigkeit, Übungsbedarf & Beliebtheit):",
+    });
+    if (res === "copied" || res === "shared") {
+      setCopiedOnboardingLink(true);
+      setTimeout(() => setCopiedOnboardingLink(false), 2400);
+    }
+  };
 
   // Local draft scores for the active card in "full" mode
   const [draftLike, setDraftLike] = useState<number>(4);
@@ -275,7 +295,7 @@ export default function OnboardingModal({
         {step === "setup" && (
           <>
             {/* Compact Top Header */}
-            <div className="flex items-center justify-between border-b-2 border-[var(--rule-heavy)] bg-[var(--bg-recessed)] px-4 py-3 sm:px-6">
+            <div className="flex items-center justify-between gap-2 border-b-2 border-[var(--rule-heavy)] bg-[var(--bg-recessed)] px-4 py-3 sm:px-6">
               <div>
                 <div className="type-kicker text-[var(--ink-secondary)]">
                   BEWERTUNGS-ONBOARDING • {currentUser.name.toUpperCase()}
@@ -284,13 +304,35 @@ export default function OnboardingModal({
                   Einstellungen für deinen Durchlauf
                 </h2>
               </div>
-              <button
-                type="button"
-                onClick={onClose}
-                className="type-kicker inline-flex items-center gap-1 border border-[var(--ink-primary)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-[var(--ink-primary)] hover:bg-[var(--accent)] hover:text-[var(--accent-ink)] cursor-pointer"
-              >
-                SCHLIESSEN <X className="h-3.5 w-3.5" />
-              </button>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={handleShareOnboarding}
+                  title="Direktlink zur Repertoire-Abstimmung kopieren"
+                  className={`type-kicker inline-flex items-center gap-1 border px-2.5 py-1.5 cursor-pointer ${
+                    copiedOnboardingLink
+                      ? "border-[var(--ink-primary)] bg-[var(--ink-primary)] font-bold text-[var(--bg-surface)]"
+                      : "border-[var(--ink-primary)] bg-[var(--bg-surface)] text-[var(--ink-primary)] hover:bg-[var(--ink-primary)] hover:text-[var(--bg-surface)]"
+                  }`}
+                >
+                  {copiedOnboardingLink ? (
+                    <>
+                      <Check className="h-3.5 w-3.5" /> LINK KOPIERT!
+                    </>
+                  ) : (
+                    <>
+                      <Share2 className="h-3.5 w-3.5" /> ABSTIMMUNG TEILEN
+                    </>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="type-kicker inline-flex items-center gap-1 border border-[var(--ink-primary)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-[var(--ink-primary)] hover:bg-[var(--accent)] hover:text-[var(--accent-ink)] cursor-pointer"
+                >
+                  SCHLIESSEN <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
             </div>
 
             {/* Setup Body — Fits cleanly on mobile without scrolling */}

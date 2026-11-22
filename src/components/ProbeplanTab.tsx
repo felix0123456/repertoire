@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   Play,
   CheckCircle2,
@@ -15,6 +15,8 @@ import {
   AlertTriangle,
   Edit3,
   Check,
+  QrCode,
+  Share2,
 } from "lucide-react";
 import {
   PieceItem,
@@ -23,6 +25,8 @@ import {
   SuggestionsData,
 } from "@/types";
 import ScoreSelector from "./ScoreSelector";
+import SessionQrModal from "./SessionQrModal";
+import { buildAppShareUrl, shareOrCopyLink } from "@/lib/share";
 
 interface ProbeplanTabProps {
   config: RehearsalConfigItem;
@@ -32,6 +36,8 @@ interface ProbeplanTabProps {
   currentUser: { id: string; name: string } | null;
   onRefresh: () => Promise<void>;
   onRequireLogin: () => void;
+  focusedSessionId?: string | null;
+  onClearFocusedSession?: () => void;
 }
 
 export default function ProbeplanTab({
@@ -42,6 +48,8 @@ export default function ProbeplanTab({
   currentUser,
   onRefresh,
   onRequireLogin,
+  focusedSessionId,
+  onClearFocusedSession,
 }: ProbeplanTabProps) {
   const [sessionsCount, setSessionsCount] = useState(config.totalSessionsLeft);
   const [piecesPerSession, setPiecesPerSession] = useState(
@@ -86,7 +94,20 @@ export default function ProbeplanTab({
   const [selectedMobileSessionId, setSelectedMobileSessionId] =
     useState<string>("");
 
-  const upcomingSessions = sessions.filter((s) => s.status !== "COMPLETED");
+  // Share & QR Modal state
+  const [qrModalSession, setQrModalSession] =
+    useState<RehearsalSessionItem | null>(null);
+  const [copiedSessionId, setCopiedSessionId] = useState<string | null>(null);
+  const [highlightedSessionId, setHighlightedSessionId] = useState<
+    string | null
+  >(null);
+
+  const lastHandledSessionRef = useRef<string | null>(null);
+
+  const upcomingSessions = useMemo(
+    () => sessions.filter((s) => s.status !== "COMPLETED"),
+    [sessions]
+  );
   const activeMobileSessionId =
     selectedMobileSessionId === "__ALL__"
       ? "__ALL__"
@@ -95,6 +116,78 @@ export default function ProbeplanTab({
       : upcomingSessions.find((s) => s.status === "ACTIVE")?.id ||
         upcomingSessions[0]?.id ||
         "";
+
+  // Automatically select & scroll to a deep-linked rehearsal session (?tab=probeplan&session=...)
+  useEffect(() => {
+    if (!focusedSessionId) {
+      lastHandledSessionRef.current = null;
+      return;
+    }
+    if (
+      lastHandledSessionRef.current === focusedSessionId ||
+      upcomingSessions.length === 0
+    ) {
+      return;
+    }
+    const normalized = String(focusedSessionId).trim().replace(/^#/, "");
+    const numeric = Number(normalized);
+    const matched = upcomingSessions.find(
+      (s) =>
+        s.id === normalized ||
+        String(s.sessionNumber) === normalized ||
+        (!Number.isNaN(numeric) &&
+          normalized !== "" &&
+          s.sessionNumber === numeric)
+    );
+    if (!matched) return;
+
+    lastHandledSessionRef.current = focusedSessionId;
+    setSelectedMobileSessionId(matched.id);
+    setHighlightedSessionId(matched.id);
+
+    const timer = setTimeout(() => {
+      const el = document.getElementById(`session-card-${matched.id}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+      onClearFocusedSession?.();
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [focusedSessionId, upcomingSessions, onClearFocusedSession]);
+
+  const handleShareSessionLink = async (session: RehearsalSessionItem) => {
+    const url = buildAppShareUrl({
+      tab: "probeplan",
+      session: session.id,
+    });
+    const dateStr = session.scheduledDate
+      ? new Date(session.scheduledDate).toLocaleString("de-DE", {
+          weekday: "short",
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : "Flexibler Termin";
+
+    const res = await shareOrCopyLink({
+      url,
+      title: `Probe #${String(session.sessionNumber).padStart(2, "0")}: ${
+        session.title
+      }`,
+      text: `Direktlink zur Probe #${String(session.sessionNumber).padStart(
+        2,
+        "0"
+      )} (${session.title}) — ${dateStr}`,
+    });
+    if (res === "copied" || res === "shared") {
+      setCopiedSessionId(session.id);
+      setTimeout(() => {
+        setCopiedSessionId((prev) => (prev === session.id ? null : prev));
+      }, 2400);
+    }
+  };
 
   const handleSaveConfig = async (
     modeOverride?: "SIMPLE_COUNT" | "EXACT_DATES" | "MANUAL",
@@ -557,6 +650,7 @@ export default function ProbeplanTab({
         ) : (
           upcomingSessions.map((session, sIdx) => {
             const isActive = session.status === "ACTIVE";
+            const isHighlighted = highlightedSessionId === session.id;
             const isVisibleOnMobile =
               activeMobileSessionId === "__ALL__" ||
               activeMobileSessionId === session.id;
@@ -566,6 +660,7 @@ export default function ProbeplanTab({
 
             return (
               <article
+                id={`session-card-${session.id}`}
                 key={session.id}
                 style={
                   {
@@ -574,12 +669,36 @@ export default function ProbeplanTab({
                 }
                 className={`${
                   isVisibleOnMobile ? "block" : "hidden"
-                } lg:block stagger-item border-t-2 bg-[var(--bg-surface)] p-3.5 sm:p-6 border-x border-b border-x-[var(--rule-border)] border-b-[var(--rule-border)] ${
-                  isActive
+                } lg:block stagger-item border-t-2 bg-[var(--bg-surface)] p-3.5 sm:p-6 border-x border-b ${
+                  isHighlighted
+                    ? "border-x-2 border-b-2 border-[var(--accent)]"
+                    : "border-x-[var(--rule-border)] border-b-[var(--rule-border)]"
+                } ${
+                  isActive || isHighlighted
                     ? "border-t-[var(--accent)]"
                     : "border-t-[var(--rule-heavy)]"
                 }`}
               >
+                {isHighlighted && (
+                  <div className="mb-3.5 flex flex-wrap items-center justify-between gap-2 border border-[var(--accent)] bg-[var(--bg-recessed)] px-3 py-1.5">
+                    <span className="type-kicker font-bold text-[var(--accent)]">
+                      ● DIREKT-ZUGANG (LINK / QR-CODE): PROBE #
+                      {String(session.sessionNumber).padStart(2, "0")} —{" "}
+                      {session.title}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setHighlightedSessionId(null);
+                        onClearFocusedSession?.();
+                      }}
+                      className="type-kicker text-[10px] text-[var(--ink-secondary)] underline cursor-pointer"
+                    >
+                      HINWEIS SCHLIESSEN
+                    </button>
+                  </div>
+                )}
+
                 {/* Session Sheet Header */}
                 <div className="flex flex-col gap-4 border-b border-[var(--rule-border)] pb-4 xl:flex-row xl:items-start xl:justify-between">
                   <div>
@@ -647,6 +766,36 @@ export default function ProbeplanTab({
 
                   {/* Session Action Bar */}
                   <div className="flex flex-wrap items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setQrModalSession(session)}
+                      title="QR-Code & Direktlink für diese Probe öffnen"
+                      className="type-kicker inline-flex items-center gap-1 border border-[var(--ink-primary)] bg-[var(--bg-recessed)] px-2.5 py-1.5 font-bold text-[var(--ink-primary)] hover:bg-[var(--ink-primary)] hover:text-[var(--bg-surface)] cursor-pointer"
+                    >
+                      <QrCode className="h-3.5 w-3.5" /> QR-CODE
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleShareSessionLink(session)}
+                      title="Direktlink zu dieser Probe in die Zwischenablage kopieren"
+                      className={`type-kicker inline-flex items-center gap-1 border px-2.5 py-1.5 cursor-pointer ${
+                        copiedSessionId === session.id
+                          ? "border-[var(--ink-primary)] bg-[var(--ink-primary)] font-bold text-[var(--bg-surface)]"
+                          : "border-[var(--rule-border)] bg-[var(--bg-paper)] text-[var(--ink-primary)] hover:border-[var(--ink-primary)]"
+                      }`}
+                    >
+                      {copiedSessionId === session.id ? (
+                        <>
+                          <Check className="h-3.5 w-3.5" /> LINK KOPIERT!
+                        </>
+                      ) : (
+                        <>
+                          <Share2 className="h-3.5 w-3.5" /> LINK TEILEN
+                        </>
+                      )}
+                    </button>
+
                     <button
                       type="button"
                       onClick={() => openEditSessionModal(session)}
@@ -1386,6 +1535,12 @@ export default function ProbeplanTab({
           </div>
         </div>
       )}
+
+      {/* Modal: Share Rehearsal Session via Direct Link & QR Code */}
+      <SessionQrModal
+        session={qrModalSession}
+        onClose={() => setQrModalSession(null)}
+      />
     </div>
   );
 }

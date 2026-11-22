@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
   Plus,
   Search,
@@ -9,10 +9,13 @@ import {
   ArrowUpDown,
   ChevronDown,
   ChevronUp,
+  Share2,
+  Check,
 } from "lucide-react";
 import { PieceItem, SuggestionsData } from "@/types";
 import TagInput from "./TagInput";
 import ScoreSelector from "./ScoreSelector";
+import { buildAppShareUrl, shareOrCopyLink } from "@/lib/share";
 
 interface RepertoireTabProps {
   pieces: PieceItem[];
@@ -21,6 +24,8 @@ interface RepertoireTabProps {
   onRefresh: () => Promise<void>;
   onRequireLogin: () => void;
   onOpenOnboarding?: () => void;
+  focusedPieceId?: string | null;
+  onClearFocusedPiece?: () => void;
 }
 
 const DIFFICULTY_LABELS: Record<string, string> = {
@@ -42,6 +47,8 @@ export default function RepertoireTab({
   onRefresh,
   onRequireLogin,
   onOpenOnboarding,
+  focusedPieceId,
+  onClearFocusedPiece,
 }: RepertoireTabProps) {
   const [search, setSearch] = useState("");
   const [filterSinger, setFilterSinger] = useState("");
@@ -74,6 +81,78 @@ export default function RepertoireTab({
   const [openMobileVotePieceId, setOpenMobileVotePieceId] = useState<
     string | null
   >(null);
+  const [copiedShareKey, setCopiedShareKey] = useState<string | null>(null);
+  const [highlightedPieceId, setHighlightedPieceId] = useState<string | null>(
+    null
+  );
+  const lastHandledPieceRef = useRef<string | null>(null);
+
+  // Sync deep-linked piece (?tab=repertoire&piece=...)
+  useEffect(() => {
+    if (!focusedPieceId) {
+      lastHandledPieceRef.current = null;
+      return;
+    }
+    if (lastHandledPieceRef.current === focusedPieceId || pieces.length === 0) {
+      return;
+    }
+    const matched = pieces.find((p) => p.id === focusedPieceId);
+    if (!matched) return;
+
+    lastHandledPieceRef.current = focusedPieceId;
+    setSearch("");
+    setFilterSinger("");
+    setFilterSoloist("");
+    setFilterSongType("");
+    setFilterDifficulty("");
+    setHighlightedPieceId(matched.id);
+    setOpenMobileVotePieceId(matched.id);
+
+    const timer = setTimeout(() => {
+      const el = document.getElementById(`repertoire-piece-${matched.id}`);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+      onClearFocusedPiece?.();
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [focusedPieceId, pieces, onClearFocusedPiece]);
+
+  const handleShareOnboardingLink = async () => {
+    const url = buildAppShareUrl({
+      tab: "repertoire",
+      onboarding: "1",
+    });
+    const res = await shareOrCopyLink({
+      url,
+      title: "Repertoire-Abstimmung & Bewertungs-Onboarding",
+      text: "Bewerte hier unser Repertoire (Schwierigkeit, Übungsbedarf & Beliebtheit):",
+    });
+    if (res === "copied" || res === "shared") {
+      setCopiedShareKey("__ONBOARDING__");
+      setTimeout(() => {
+        setCopiedShareKey((prev) => (prev === "__ONBOARDING__" ? null : prev));
+      }, 2400);
+    }
+  };
+
+  const handleSharePieceLink = async (piece: PieceItem) => {
+    const url = buildAppShareUrl({
+      tab: "repertoire",
+      piece: piece.id,
+    });
+    const res = await shareOrCopyLink({
+      url,
+      title: `Repertoire-Abstimmung: ${piece.title}`,
+      text: `Stimme im Repertoire über „${piece.title}“${
+        piece.folderNumber ? ` (Mappe #${piece.folderNumber})` : ""
+      } ab:`,
+    });
+    if (res === "copied" || res === "shared") {
+      setCopiedShareKey(piece.id);
+      setTimeout(() => {
+        setCopiedShareKey((prev) => (prev === piece.id ? null : prev));
+      }, 2400);
+    }
+  };
 
   // Form states
   const [title, setTitle] = useState("");
@@ -351,17 +430,35 @@ export default function RepertoireTab({
           </button>
 
           {onOpenOnboarding && pieces.length > 0 && (
-            <button
-              type="button"
-              onClick={onOpenOnboarding}
-              title="Bewertungs-Onboarding"
-              className="type-kicker shrink-0 border border-[var(--ink-primary)] bg-[var(--bg-paper)] px-2 py-1.5 text-[10px] font-bold text-[var(--ink-primary)] cursor-pointer"
-            >
-              ★{" "}
-              {currentUser
-                ? pieces.filter((p) => !p.myVote).length
-                : pieces.length}
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={onOpenOnboarding}
+                title="Bewertungs-Onboarding"
+                className="type-kicker shrink-0 border border-[var(--ink-primary)] bg-[var(--bg-paper)] px-2 py-1.5 text-[10px] font-bold text-[var(--ink-primary)] cursor-pointer"
+              >
+                ★{" "}
+                {currentUser
+                  ? pieces.filter((p) => !p.myVote).length
+                  : pieces.length}
+              </button>
+              <button
+                type="button"
+                onClick={handleShareOnboardingLink}
+                title="Direktlink zur Repertoire-Abstimmung kopieren"
+                className={`type-kicker inline-flex shrink-0 items-center gap-1 border px-2 py-1.5 text-[10px] cursor-pointer ${
+                  copiedShareKey === "__ONBOARDING__"
+                    ? "border-[var(--ink-primary)] bg-[var(--ink-primary)] font-bold text-[var(--bg-surface)]"
+                    : "border-[var(--rule-border)] bg-[var(--bg-paper)] text-[var(--ink-primary)]"
+                }`}
+              >
+                {copiedShareKey === "__ONBOARDING__" ? (
+                  <Check className="h-3 w-3" />
+                ) : (
+                  <Share2 className="h-3 w-3" />
+                )}
+              </button>
+            </>
           )}
 
           <button
@@ -405,18 +502,41 @@ export default function RepertoireTab({
             </button>
 
             {onOpenOnboarding && pieces.length > 0 && (
-              <button
-                type="button"
-                onClick={onOpenOnboarding}
-                className="type-kicker ui-transition flex w-full items-center justify-between border border-[var(--ink-primary)] bg-[var(--bg-recessed)] px-3.5 py-2.5 text-[var(--ink-primary)] hover:bg-[var(--ink-primary)] hover:text-[var(--bg-surface)] cursor-pointer"
-              >
-                <span>BEWERTUNGS-ONBOARDING</span>
-                <span className="font-mono-tabular">
-                  {currentUser
-                    ? `${pieces.filter((p) => !p.myVote).length} OFFEN`
-                    : `${pieces.length} STÜCKE`}
-                </span>
-              </button>
+              <div className="space-y-1.5">
+                <button
+                  type="button"
+                  onClick={onOpenOnboarding}
+                  className="type-kicker ui-transition flex w-full items-center justify-between border border-[var(--ink-primary)] bg-[var(--bg-recessed)] px-3.5 py-2.5 text-[var(--ink-primary)] hover:bg-[var(--ink-primary)] hover:text-[var(--bg-surface)] cursor-pointer"
+                >
+                  <span>BEWERTUNGS-ONBOARDING</span>
+                  <span className="font-mono-tabular">
+                    {currentUser
+                      ? `${pieces.filter((p) => !p.myVote).length} OFFEN`
+                      : `${pieces.length} STÜCKE`}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleShareOnboardingLink}
+                  className={`type-kicker ui-transition flex w-full items-center justify-center gap-1.5 border px-3 py-2 cursor-pointer ${
+                    copiedShareKey === "__ONBOARDING__"
+                      ? "border-[var(--ink-primary)] bg-[var(--ink-primary)] font-bold text-[var(--bg-surface)]"
+                      : "border-[var(--rule-border)] bg-[var(--bg-paper)] text-[var(--ink-secondary)] hover:border-[var(--ink-primary)] hover:text-[var(--ink-primary)]"
+                  }`}
+                >
+                  {copiedShareKey === "__ONBOARDING__" ? (
+                    <>
+                      <Check className="h-3.5 w-3.5" />
+                      <span>ABSTIMMUNGS-LINK KOPIERT!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Share2 className="h-3.5 w-3.5" />
+                      <span>REPERTOIRE-ABSTIMMUNG TEILEN</span>
+                    </>
+                  )}
+                </button>
+              </div>
             )}
           </div>
 
@@ -603,16 +723,37 @@ export default function RepertoireTab({
               const myVote = piece.myVote;
               const isExpanded = expandedVotesPieceId === piece.id;
               const isMobileVoteOpen = openMobileVotePieceId === piece.id;
+              const isHighlighted = highlightedPieceId === piece.id;
               const staggerIdx = Math.min(idx, 8);
 
               return (
                 <article
+                  id={`repertoire-piece-${piece.id}`}
                   key={piece.id}
                   style={
                     { "--stagger-index": staggerIdx } as React.CSSProperties
                   }
-                  className="stagger-item border-b border-[var(--rule-border)] last:border-b-0 p-3 sm:p-6"
+                  className={`stagger-item border-b border-[var(--rule-border)] last:border-b-0 p-3 sm:p-6 ${
+                    isHighlighted ? "bg-[var(--bg-recessed)]/40" : ""
+                  }`}
                 >
+                  {isHighlighted && (
+                    <div className="mb-3 flex items-center justify-between gap-2 border border-[var(--accent)] bg-[var(--bg-recessed)] px-3 py-1.5">
+                      <span className="type-kicker font-bold text-[var(--accent)]">
+                        ● DIREKT-LINK ZUR STÜCK-ABSTIMMUNG: „{piece.title}“
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setHighlightedPieceId(null);
+                          onClearFocusedPiece?.();
+                        }}
+                        className="type-kicker text-[10px] text-[var(--ink-secondary)] underline cursor-pointer"
+                      >
+                        SCHLIESSEN
+                      </button>
+                    </div>
+                  )}
                   {/* Top Row: Index Number, Title, Tags, Actions */}
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-baseline gap-2.5 min-w-0">
@@ -694,6 +835,29 @@ export default function RepertoireTab({
                           <ChevronUp className="h-3 w-3" />
                         ) : (
                           <ChevronDown className="h-3 w-3" />
+                        )}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleSharePieceLink(piece)}
+                        className={`type-kicker inline-flex items-center gap-1 border px-2 py-1 cursor-pointer ${
+                          copiedShareKey === piece.id
+                            ? "border-[var(--ink-primary)] bg-[var(--ink-primary)] font-bold text-[var(--bg-surface)]"
+                            : "border-[var(--rule-border)] bg-[var(--bg-paper)] text-[var(--ink-secondary)] hover:border-[var(--ink-primary)] hover:text-[var(--ink-primary)]"
+                        }`}
+                        title="Direktlink zur Abstimmung für dieses Stück kopieren"
+                      >
+                        {copiedShareKey === piece.id ? (
+                          <>
+                            <Check className="h-3.5 w-3.5" />
+                            <span className="hidden sm:inline">KOPIERT!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Share2 className="h-3.5 w-3.5" />
+                            <span className="hidden sm:inline">TEILEN</span>
+                          </>
                         )}
                       </button>
 

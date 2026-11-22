@@ -1,19 +1,87 @@
 "use client";
 
-import React from "react";
-import { RotateCcw } from "lucide-react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import { RotateCcw, QrCode, Share2, Check } from "lucide-react";
 import { RehearsalSessionItem } from "@/types";
+import SessionQrModal from "./SessionQrModal";
+import { buildAppShareUrl, shareOrCopyLink } from "@/lib/share";
 
 interface HistorieTabProps {
   sessions: RehearsalSessionItem[];
   onRefresh: () => Promise<void>;
+  focusedSessionId?: string | null;
+  onClearFocusedSession?: () => void;
 }
 
 export default function HistorieTab({
   sessions,
   onRefresh,
+  focusedSessionId,
+  onClearFocusedSession,
 }: HistorieTabProps) {
-  const completedSessions = sessions.filter((s) => s.status === "COMPLETED");
+  const completedSessions = useMemo(
+    () => sessions.filter((s) => s.status === "COMPLETED"),
+    [sessions]
+  );
+  const [qrModalSession, setQrModalSession] =
+    useState<RehearsalSessionItem | null>(null);
+  const [copiedSessionId, setCopiedSessionId] = useState<string | null>(null);
+  const [highlightedSessionId, setHighlightedSessionId] = useState<
+    string | null
+  >(null);
+  const lastHandledSessionRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!focusedSessionId) {
+      lastHandledSessionRef.current = null;
+      return;
+    }
+    if (
+      lastHandledSessionRef.current === focusedSessionId ||
+      completedSessions.length === 0
+    ) {
+      return;
+    }
+    const normalized = String(focusedSessionId).trim().replace(/^#/, "");
+    const numeric = Number(normalized);
+    const matched = completedSessions.find(
+      (s) =>
+        s.id === normalized ||
+        String(s.sessionNumber) === normalized ||
+        (!Number.isNaN(numeric) &&
+          normalized !== "" &&
+          s.sessionNumber === numeric)
+    );
+    if (!matched) return;
+
+    lastHandledSessionRef.current = focusedSessionId;
+    setHighlightedSessionId(matched.id);
+    const timer = setTimeout(() => {
+      const el = document.getElementById(`history-session-${matched.id}`);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+      onClearFocusedSession?.();
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [focusedSessionId, completedSessions, onClearFocusedSession]);
+
+  const handleShareCompletedSession = async (s: RehearsalSessionItem) => {
+    const url = buildAppShareUrl({
+      tab: "historie",
+      session: s.id,
+    });
+    const res = await shareOrCopyLink({
+      url,
+      title: `Proben-Protokoll #${String(s.sessionNumber).padStart(2, "0")}: ${
+        s.title
+      }`,
+    });
+    if (res === "copied" || res === "shared") {
+      setCopiedSessionId(s.id);
+      setTimeout(() => {
+        setCopiedSessionId((prev) => (prev === s.id ? null : prev));
+      }, 2400);
+    }
+  };
 
   const handleReopen = async (sessionId: string) => {
     await fetch(`/api/rehearsals/${sessionId}`, {
@@ -66,14 +134,37 @@ export default function HistorieTab({
         ) : (
           completedSessions.map((s, idx) => (
             <article
+              id={`history-session-${s.id}`}
               key={s.id}
               style={
                 {
                   "--stagger-index": Math.min(idx, 8),
                 } as React.CSSProperties
               }
-              className="stagger-item border-t-2 border-[var(--rule-heavy)] bg-[var(--bg-surface)] p-5 sm:p-6 border-x border-b border-x-[var(--rule-border)] border-b-[var(--rule-border)]"
+              className={`stagger-item border-t-2 bg-[var(--bg-surface)] p-5 sm:p-6 border-x border-b ${
+                highlightedSessionId === s.id
+                  ? "border-t-[var(--accent)] border-x-2 border-b-2 border-[var(--accent)]"
+                  : "border-[var(--rule-heavy)] border-x-[var(--rule-border)] border-b-[var(--rule-border)]"
+              }`}
             >
+              {highlightedSessionId === s.id && (
+                <div className="mb-3.5 flex flex-wrap items-center justify-between gap-2 border border-[var(--accent)] bg-[var(--bg-recessed)] px-3 py-1.5">
+                  <span className="type-kicker font-bold text-[var(--accent)]">
+                    ● DIREKT-ZUGANG (LINK / QR-CODE): PROBEN-PROTOKOLL #
+                    {String(s.sessionNumber).padStart(2, "0")} — {s.title}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHighlightedSessionId(null);
+                      onClearFocusedSession?.();
+                    }}
+                    className="type-kicker text-[10px] text-[var(--ink-secondary)] underline cursor-pointer"
+                  >
+                    HINWEIS SCHLIESSEN
+                  </button>
+                </div>
+              )}
               <div className="flex flex-col gap-3 border-b border-[var(--rule-border)] pb-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -92,13 +183,41 @@ export default function HistorieTab({
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => handleReopen(s.id)}
-                  className="type-kicker inline-flex items-center gap-1 border border-[var(--rule-border)] bg-[var(--bg-paper)] px-3 py-1.5 text-[var(--ink-primary)] hover:border-[var(--ink-primary)] cursor-pointer"
-                >
-                  <RotateCcw className="h-3.5 w-3.5" /> WIEDER ÖFFNEN
-                </button>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setQrModalSession(s)}
+                    className="type-kicker inline-flex items-center gap-1 border border-[var(--ink-primary)] bg-[var(--bg-recessed)] px-2.5 py-1.5 font-bold text-[var(--ink-primary)] hover:bg-[var(--ink-primary)] hover:text-[var(--bg-surface)] cursor-pointer"
+                  >
+                    <QrCode className="h-3.5 w-3.5" /> QR-CODE
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleShareCompletedSession(s)}
+                    className={`type-kicker inline-flex items-center gap-1 border px-2.5 py-1.5 cursor-pointer ${
+                      copiedSessionId === s.id
+                        ? "border-[var(--ink-primary)] bg-[var(--ink-primary)] font-bold text-[var(--bg-surface)]"
+                        : "border-[var(--rule-border)] bg-[var(--bg-paper)] text-[var(--ink-primary)] hover:border-[var(--ink-primary)]"
+                    }`}
+                  >
+                    {copiedSessionId === s.id ? (
+                      <>
+                        <Check className="h-3.5 w-3.5" /> KOPIERT!
+                      </>
+                    ) : (
+                      <>
+                        <Share2 className="h-3.5 w-3.5" /> TEILEN
+                      </>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleReopen(s.id)}
+                    className="type-kicker inline-flex items-center gap-1 border border-[var(--rule-border)] bg-[var(--bg-paper)] px-3 py-1.5 text-[var(--ink-primary)] hover:border-[var(--ink-primary)] cursor-pointer"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" /> WIEDER ÖFFNEN
+                  </button>
+                </div>
               </div>
 
               <div className="mt-4">
@@ -172,6 +291,11 @@ export default function HistorieTab({
           ))
         )}
       </section>
+
+      <SessionQrModal
+        session={qrModalSession}
+        onClose={() => setQrModalSession(null)}
+      />
     </div>
   );
 }

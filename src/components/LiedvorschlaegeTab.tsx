@@ -34,6 +34,7 @@ import {
   ArrowRight,
   Music,
   RefreshCw,
+  Share2,
 } from "lucide-react";
 import {
   ProposalDecision,
@@ -41,6 +42,7 @@ import {
   SongProposalItem,
   SuggestionsData,
 } from "@/types";
+import { buildAppShareUrl, shareOrCopyLink } from "@/lib/share";
 
 interface LiedvorschlaegeTabProps {
   proposals: SongProposalItem[];
@@ -48,6 +50,9 @@ interface LiedvorschlaegeTabProps {
   currentUser: { id: string; name: string } | null;
   onRefresh: () => Promise<void>;
   onRequireLogin: () => void;
+  focusedProposalId?: string | null;
+  initialSubTab?: "swipe" | "results" | null;
+  onClearFocusedProposal?: () => void;
 }
 
 function formatSecondsToMmSs(sec: number): string {
@@ -77,9 +82,19 @@ export default function LiedvorschlaegeTab({
   currentUser,
   onRefresh,
   onRequireLogin,
+  focusedProposalId,
+  initialSubTab,
+  onClearFocusedProposal,
 }: LiedvorschlaegeTabProps) {
   // Sub-view mode: "swipe" (Tinder card deck) or "results" (Leaderboard & Evaluation)
-  const [subTab, setSubTab] = useState<"swipe" | "results">("swipe");
+  const [subTab, setSubTab] = useState<"swipe" | "results">(
+    initialSubTab || "swipe"
+  );
+  const [copiedShareKey, setCopiedShareKey] = useState<string | null>(null);
+  const [highlightedProposalId, setHighlightedProposalId] = useState<
+    string | null
+  >(null);
+  const lastHandledProposalRef = useRef<string | null>(null);
 
   // Deck filtering & session skip state
   const [deckScope, setDeckScope] = useState<"open" | "all">("open");
@@ -194,19 +209,137 @@ export default function LiedvorschlaegeTab({
     [proposals]
   );
 
-  // Filtered deck for Swipe mode
+  // Sync initialSubTab / focusedProposalId from URL deep-link
+  useEffect(() => {
+    if (initialSubTab === "swipe" || initialSubTab === "results") {
+      setSubTab(initialSubTab);
+    }
+  }, [initialSubTab]);
+
+  useEffect(() => {
+    if (!focusedProposalId) {
+      lastHandledProposalRef.current = null;
+      return;
+    }
+    if (
+      lastHandledProposalRef.current === focusedProposalId ||
+      proposals.length === 0
+    ) {
+      return;
+    }
+    const matched = proposals.find((p) => p.id === focusedProposalId);
+    if (!matched) return;
+
+    lastHandledProposalRef.current = focusedProposalId;
+    setHighlightedProposalId(matched.id);
+
+    if (initialSubTab === "results") {
+      setSubTab("results");
+      setStatusFilter("all");
+      setSearchQuery("");
+      const timer = setTimeout(() => {
+        const el = document.getElementById(`proposal-result-${matched.id}`);
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+        onClearFocusedProposal?.();
+      }, 100);
+      return () => clearTimeout(timer);
+    } else {
+      setSubTab("swipe");
+      setPlatformFilter("ALL");
+      setSkippedIds((prev) => prev.filter((id) => id !== matched.id));
+      setCurrentIndex(0);
+      onClearFocusedProposal?.();
+    }
+  }, [
+    focusedProposalId,
+    initialSubTab,
+    proposals,
+    onClearFocusedProposal,
+  ]);
+
+  const handleShareVotingView = async () => {
+    const url = buildAppShareUrl({
+      tab: "vorschlaege",
+      view: subTab,
+    });
+    const res = await shareOrCopyLink({
+      url,
+      title:
+        subTab === "results"
+          ? "Liedvorschläge — Auswertung & Rangliste"
+          : "Liedvorschläge — Swipe-Abstimmung",
+      text:
+        subTab === "results"
+          ? "Hier ist die aktuelle Auswertung unserer Liedvorschläge:"
+          : "Stimme hier im Swipe-Deck über unsere neuen Liedvorschläge ab:",
+    });
+    if (res === "copied" || res === "shared") {
+      setCopiedShareKey("__VIEW__");
+      setTimeout(() => {
+        setCopiedShareKey((prev) => (prev === "__VIEW__" ? null : prev));
+      }, 2400);
+    }
+  };
+
+  const handleShareSingleProposal = async (
+    proposal: SongProposalItem,
+    targetView: "swipe" | "results" = "swipe"
+  ) => {
+    const url = buildAppShareUrl({
+      tab: "vorschlaege",
+      proposal: proposal.id,
+      view: targetView,
+    });
+    const res = await shareOrCopyLink({
+      url,
+      title: `Liedvorschlag: ${proposal.title}${
+        proposal.artist ? ` — ${proposal.artist}` : ""
+      }`,
+      text: `Stimme über den Liedvorschlag „${proposal.title}“${
+        proposal.artist ? ` (${proposal.artist})` : ""
+      } ab:`,
+    });
+    if (res === "copied" || res === "shared") {
+      setCopiedShareKey(proposal.id);
+      setTimeout(() => {
+        setCopiedShareKey((prev) => (prev === proposal.id ? null : prev));
+      }, 2400);
+    }
+  };
+
+  // Filtered deck for Swipe mode (always prioritizes deep-linked highlightedProposalId at index 0 unless skipped)
   const swipeDeck = useMemo(() => {
-    return proposals.filter((p) => {
+    const filtered = proposals.filter((p) => {
+      if (deckScope === "open" && skippedIds.includes(p.id)) {
+        return false;
+      }
+      if (highlightedProposalId && p.id === highlightedProposalId) {
+        return true;
+      }
       if (platformFilter !== "ALL" && p.platform !== platformFilter) {
         return false;
       }
       if (deckScope === "open") {
         if (p.myVote) return false;
-        if (skippedIds.includes(p.id)) return false;
       }
       return true;
     });
-  }, [proposals, platformFilter, deckScope, skippedIds]);
+
+    if (highlightedProposalId) {
+      const idx = filtered.findIndex((p) => p.id === highlightedProposalId);
+      if (idx > 0) {
+        const [target] = filtered.splice(idx, 1);
+        filtered.unshift(target);
+      }
+    }
+    return filtered;
+  }, [
+    proposals,
+    platformFilter,
+    deckScope,
+    skippedIds,
+    highlightedProposalId,
+  ]);
 
   const safeIndex =
     swipeDeck.length === 0 ? 0 : Math.min(currentIndex, swipeDeck.length);
@@ -386,6 +519,10 @@ export default function LiedvorschlaegeTab({
         if (skippedIds.includes(targetId)) {
           setSkippedIds((prev) => prev.filter((id) => id !== targetId));
         }
+        if (highlightedProposalId === targetId) {
+          setHighlightedProposalId(null);
+          onClearFocusedProposal?.();
+        }
 
         await onRefresh();
 
@@ -414,6 +551,10 @@ export default function LiedvorschlaegeTab({
   // Skip card without voting
   const handleSkipCard = useCallback(() => {
     if (!activeCard) return;
+    if (highlightedProposalId === activeCard.id) {
+      setHighlightedProposalId(null);
+      onClearFocusedProposal?.();
+    }
     if (deckScope === "open") {
       setSkippedIds((prev) =>
         prev.includes(activeCard.id) ? prev : [...prev, activeCard.id]
@@ -422,7 +563,13 @@ export default function LiedvorschlaegeTab({
       setCurrentIndex((prev) => Math.min(prev + 1, swipeDeck.length));
     }
     setDragOffset({ x: 0, y: 0 });
-  }, [activeCard, deckScope, swipeDeck.length]);
+  }, [
+    activeCard,
+    highlightedProposalId,
+    onClearFocusedProposal,
+    deckScope,
+    swipeDeck.length,
+  ]);
 
   // Undo last vote
   const handleUndoLastVote = useCallback(async () => {
@@ -991,14 +1138,39 @@ export default function LiedvorschlaegeTab({
           </button>
         </div>
 
-        <button
-          type="button"
-          onClick={openAddProposalModal}
-          className="type-kicker ui-transition inline-flex items-center gap-1.5 bg-[var(--accent)] px-3.5 py-2 text-xs font-bold text-[var(--accent-ink)] cursor-pointer"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          <span>LIED / PLAYLIST VORSCHLAGEN</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button
+            type="button"
+            onClick={handleShareVotingView}
+            title="Direktlink zu dieser Liedvorschläge-Abstimmung kopieren"
+            className={`type-kicker ui-transition inline-flex items-center gap-1.5 border px-3 py-2 text-xs cursor-pointer ${
+              copiedShareKey === "__VIEW__"
+                ? "border-[var(--ink-primary)] bg-[var(--ink-primary)] font-bold text-[var(--bg-surface)]"
+                : "border-[var(--ink-primary)] bg-[var(--bg-paper)] text-[var(--ink-primary)] hover:bg-[var(--bg-recessed)]"
+            }`}
+          >
+            {copiedShareKey === "__VIEW__" ? (
+              <>
+                <Check className="h-3.5 w-3.5" />
+                <span>ABSTIMMUNGS-LINK KOPIERT!</span>
+              </>
+            ) : (
+              <>
+                <Share2 className="h-3.5 w-3.5" />
+                <span>ABSTIMMUNG TEILEN</span>
+              </>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={openAddProposalModal}
+            className="type-kicker ui-transition inline-flex items-center gap-1.5 bg-[var(--accent)] px-3.5 py-2 text-xs font-bold text-[var(--accent-ink)] cursor-pointer"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            <span>LIED / PLAYLIST VORSCHLAGEN</span>
+          </button>
+        </div>
       </div>
 
       {/* =====================================================================
@@ -1006,6 +1178,25 @@ export default function LiedvorschlaegeTab({
          ===================================================================== */}
       {subTab === "swipe" && (
         <div className="mx-auto max-w-xl">
+          {highlightedProposalId &&
+            activeCard &&
+            activeCard.id === highlightedProposalId && (
+              <div className="mb-2.5 flex items-center justify-between gap-2 border-2 border-[var(--accent)] bg-[var(--bg-recessed)] px-3 py-1.5">
+                <span className="type-kicker font-bold text-[var(--accent)]">
+                  ● DIREKT-LINK: GETEILTER LIEDVORSCHLAG „{activeCard.title}“
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHighlightedProposalId(null);
+                    onClearFocusedProposal?.();
+                  }}
+                  className="type-kicker text-[10px] text-[var(--ink-secondary)] underline cursor-pointer"
+                >
+                  SCHLIESSEN
+                </button>
+              </div>
+            )}
           {/* Deck Filter & Undo Status Bar */}
           <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2 border border-[var(--rule-border)] bg-[var(--bg-surface)] px-3 py-2">
             <div className="flex items-center gap-1.5">
@@ -1365,6 +1556,29 @@ export default function LiedvorschlaegeTab({
                       )}
                     </button>
 
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleShareSingleProposal(activeCard, "swipe")
+                      }
+                      title="Direktlink zu diesem Liedvorschlag teilen"
+                      className={`type-kicker inline-flex items-center gap-1 border px-2 py-1 text-[10px] cursor-pointer ${
+                        copiedShareKey === activeCard.id
+                          ? "border-[var(--ink-primary)] bg-[var(--ink-primary)] font-bold text-[var(--bg-surface)]"
+                          : "border-[var(--rule-border)] bg-[var(--bg-surface)] text-[var(--ink-primary)] hover:border-[var(--ink-primary)]"
+                      }`}
+                    >
+                      {copiedShareKey === activeCard.id ? (
+                        <>
+                          <Check className="h-3 w-3" /> KOPIERT!
+                        </>
+                      ) : (
+                        <>
+                          <Share2 className="h-3 w-3" /> TEILEN
+                        </>
+                      )}
+                    </button>
+
                     <a
                       href={activeCard.sourceUrl}
                       target="_blank"
@@ -1609,11 +1823,35 @@ export default function LiedvorschlaegeTab({
                   (v) => v.comment && v.comment.trim() !== ""
                 );
 
+                const isHighlighted = highlightedProposalId === proposal.id;
+
                 return (
                   <div
+                    id={`proposal-result-${proposal.id}`}
                     key={proposal.id}
-                    className="border border-[var(--rule-heavy)] bg-[var(--bg-surface)] p-3.5 sm:p-4"
+                    className={`border bg-[var(--bg-surface)] p-3.5 sm:p-4 ${
+                      isHighlighted
+                        ? "border-2 border-[var(--accent)]"
+                        : "border-[var(--rule-heavy)]"
+                    }`}
                   >
+                    {isHighlighted && (
+                      <div className="mb-2.5 flex items-center justify-between gap-2 border border-[var(--accent)] bg-[var(--bg-recessed)] px-3 py-1">
+                        <span className="type-kicker font-bold text-[var(--accent)]">
+                          ● DIREKT-LINK: GETEILTER LIEDVORSCHLAG
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setHighlightedProposalId(null);
+                            onClearFocusedProposal?.();
+                          }}
+                          className="type-kicker text-[10px] text-[var(--ink-secondary)] underline cursor-pointer"
+                        >
+                          AUSBLENDEN
+                        </button>
+                      </div>
+                    )}
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                       {/* Left: Rank + Cover + Metadata */}
                       <div className="flex items-start gap-3 min-w-0 flex-1">
@@ -1797,6 +2035,29 @@ export default function LiedvorschlaegeTab({
                         </div>
 
                         <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleShareSingleProposal(proposal, "swipe")
+                            }
+                            title="Direktlink zur Abstimmung für dieses Lied kopieren"
+                            className={`type-kicker inline-flex items-center gap-1 border px-2 py-1 text-[10px] cursor-pointer ${
+                              copiedShareKey === proposal.id
+                                ? "border-[var(--ink-primary)] bg-[var(--ink-primary)] font-bold text-[var(--bg-surface)]"
+                                : "border-[var(--rule-border)] bg-[var(--bg-paper)] text-[var(--ink-secondary)] hover:border-[var(--ink-primary)]"
+                            }`}
+                          >
+                            {copiedShareKey === proposal.id ? (
+                              <>
+                                <Check className="h-3 w-3" /> KOPIERT!
+                              </>
+                            ) : (
+                              <>
+                                <Share2 className="h-3 w-3" /> TEILEN
+                              </>
+                            )}
+                          </button>
+
                           <button
                             type="button"
                             onClick={() => {
