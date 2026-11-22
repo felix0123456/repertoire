@@ -9,11 +9,12 @@ datasource db {
 }
 
 model User {
-  id        String         @id @default(cuid())
-  name      String         @unique
-  createdAt DateTime       @default(now())
-  votes     PieceVote[]
-  logs      RehearsalLog[]
+  id            String             @id @default(cuid())
+  name          String             @unique
+  createdAt     DateTime           @default(now())
+  votes         PieceVote[]
+  logs          RehearsalLog[]
+  proposalVotes SongProposalVote[]
 }
 
 model Piece {
@@ -115,5 +116,38 @@ model RehearsalLog {
   session RehearsalSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   piece   Piece            @relation(fields: [pieceId], references: [id], onDelete: Cascade)
   user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SongProposal {
+  id                 String             @id @default(cuid())
+  title              String
+  artist             String             @default("")
+  platform           String             @default("YOUTUBE") // YOUTUBE | SPOTIFY
+  externalId         String             @default("")
+  sourceUrl          String
+  embedUrl           String             @default("")
+  thumbnailUrl       String             @default("")
+  previewAudioUrl    String             @default("")
+  startSeconds       Int                @default(0)
+  notes              String             @default("")
+  proposedBy         String             @default("")
+  transferredPieceId String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  votes              SongProposalVote[]
+}
+
+model SongProposalVote {
+  id         String       @id @default(cuid())
+  proposalId String
+  userId     String
+  decision   String       @default("YES") // YES | NO | SUPER
+  comment    String       @default("")
+  updatedAt  DateTime     @updatedAt
+
+  proposal SongProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  user     User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, proposalId])
 }
 

@@ -1,5 +1,5 @@
 {
-  "exportedAt": "2026-11-16T18:51:00.860Z",
+  "exportedAt": "2026-11-22T15:39:49Z",
   "users": [
     {
       "id": "cmwjey1jx002qlrqy5vpa9njr",
@@ -21,7 +21,7 @@
       "lastPracticedAt": null,
       "createdBy": "Setlist Dance & Talk 2026",
       "createdAt": "2026-11-16T00:01:18.161Z",
-      "updatedAt": "2026-11-16T17:20:15.482Z"
+      "updatedAt": "2026-11-16T18:52:28.376Z"
     },
     {
       "id": "cmwii06z60002lrqysfvz5ugp",
@@ -29,14 +29,14 @@
       "folderNumber": "",
       "artist": "BigBand MV Neumarkt",
       "singers": "",
-      "soloists": "",
+      "soloists": "Felix, Lumpi",
       "songType": "Jive",
       "difficulty": "MEDIUM",
-      "notes": "Set 1 (Nr. 2) \u2022 Instrumental",
+      "notes": "Set 1 (Nr. 2) • Instrumental",
       "lastPracticedAt": null,
       "createdBy": "Setlist Dance & Talk 2026",
       "createdAt": "2026-11-16T00:01:18.162Z",
-      "updatedAt": "2026-11-16T17:20:15.484Z"
+      "updatedAt": "2026-11-16T18:59:01.532Z"
     },
     {
       "id": "cmwii06z70003lrqyfp6q4n9x",
@@ -51,7 +51,7 @@
       "lastPracticedAt": null,
       "createdBy": "Setlist Dance & Talk 2026",
       "createdAt": "2026-11-16T00:01:18.163Z",
-      "updatedAt": "2026-11-16T17:20:15.485Z"
+      "updatedAt": "2026-11-16T18:52:28.379Z"
     },
     {
       "id": "cmwii06z70004lrqyjvo38s8y",
@@ -66,7 +66,7 @@
       "lastPracticedAt": null,
       "createdBy": "Setlist Dance & Talk 2026",
       "createdAt": "2026-11-16T00:01:18.164Z",
-      "updatedAt": "2026-11-16T17:20:15.486Z"
+      "updatedAt": "2026-11-16T18:52:28.381Z"
     },
     {
       "id": "cmwii06z80005lrqyn9ss9kjr",
@@ -81,7 +81,7 @@
       "lastPracticedAt": null,
       "createdBy": "Setlist Dance & Talk 2026",
       "createdAt": "2026-11-16T00:01:18.165Z",
-      "updatedAt": "2026-11-16T17:20:15.488Z"
+      "updatedAt": "2026-11-16T18:52:28.382Z"
     },
     {
       "id": "cmwii06z90006lrqyw2nfca3j",
@@ -96,7 +96,7 @@
       "lastPracticedAt": null,
       "createdBy": "Setlist Dance & Talk 2026",
       "createdAt": "2026-11-16T00:01:18.166Z",
-      "updatedAt": "2026-11-16T17:20:15.489Z"
+      "updatedAt": "2026-11-16T18:52:28.383Z"
     },
     {
       "id": "cmwii06za0007lrqynuq1s6h6",
@@ -111,7 +111,7 @@
       "lastPracticedAt": null,
       "createdBy": "Setlist Dance & Talk 2026",
       "createdAt": "2026-11-16T00:01:18.167Z",
-      "updatedAt": "2026-11-16T17:20:15.490Z"
+      "updatedAt": "2026-11-16T18:52:28.385Z"
     },
     {
       "id": "cmwii06zb0008lrqy5v7yeega",
@@ -126,22 +126,22 @@
       "lastPracticedAt": null,
       "createdBy": "Setlist Dance & Talk 2026",
       "createdAt": "2026-11-16T00:01:18.167Z",
-      "updatedAt": "2026-11-16T17:20:15.491Z"
+      "updatedAt": "2026-11-16T18:52:28.386Z"
     },
     {
       "id": "cmwii06zc0009lrqysmh33np1",
-      "title": "Aber dich gibts nur einmal f\u00fcr mich",
+      "title": "Aber dich gibts nur einmal für mich",
       "folderNumber": "",
       "artist": "BigBand MV Neumarkt",
       "singers": "Lukas, Judith",
       "soloists": "",
       "songType": "Walzer",
       "difficulty": "MEDIUM",
-      "notes": "Set 1 (Nr. 9) \u2022 Duett",
+      "notes": "Set 1 (Nr. 9) • Duett",
       "lastPracticedAt": null,
       "createdBy": "Setlist Dance & Talk 2026",
       "createdAt": "2026-11-16T00:01:18.168Z",
-      "updatedAt": "2026-11-16T17:20:15.492Z"
+      "updatedAt": "2026-11-16T18:52:28.387Z"
     },
     {
       "id": "cmwii06zc000alrqy5bhpjxyh",
@@ -156,7 +156,7 @@
       "lastPracticedAt": null,
       "createdBy": "Setlist Dance & Talk 2026",
       "createdAt": "2026-11-16T00:01:18.169Z",
-      "updatedAt": "2026-11-16T17:20:15.494Z"
+      "updatedAt": "2026-11-16T18:52:28.388Z"
     },
     {
       "id": "cmwii06zd000blrqy7h1iqikt",
@@ -171,7 +171,7 @@
       "lastPracticedAt": null,
       "createdBy": "Setlist Dance & Talk 2026",
       "createdAt": "2026-11-16T00:01:18.169Z",
-      "updatedAt": "2026-11-16T17:20:15.495Z"
+      "updatedAt": "2026-11-16T18:52:28.389Z"
     },
     {
       "id": "cmwii06zd000clrqyivkmuhgo",
@@ -185,8 +185,8 @@
       "notes": "Set 1 (Nr. 12)",
       "lastPracticedAt": null,
       "createdBy": "Setlist Dance & Talk 2026",
-      "createdAt": "2026-11-16T00:01:18.170Z",
-      "updatedAt": "2026-11-16T17:20:15.496Z"
+      "createdAt": "2026-11-16T00:01:18.17Z",
+      "updatedAt": "2026-11-16T18:52:28.39Z"
     },
     {
       "id": "cmwii06ze000dlrqyn7h5dho6",
@@ -201,7 +201,7 @@
       "lastPracticedAt": null,
       "createdBy": "Setlist Dance & Talk 2026",
       "createdAt": "2026-11-16T00:01:18.171Z",
-      "updatedAt": "2026-11-16T17:20:15.496Z"
+      "updatedAt": "2026-11-16T18:52:28.391Z"
     },
     {
       "id": "cmwii06zf000elrqyjh9zjh3x",
@@ -212,11 +212,11 @@
       "soloists": "",
       "songType": "Walzer",
       "difficulty": "MEDIUM",
-      "notes": "Set 1 (Nr. 14) \u2022 Instrumental",
+      "notes": "Set 1 (Nr. 14) • Instrumental",
       "lastPracticedAt": null,
       "createdBy": "Setlist Dance & Talk 2026",
       "createdAt": "2026-11-16T00:01:18.171Z",
-      "updatedAt": "2026-11-16T17:20:15.497Z"
+      "updatedAt": "2026-11-16T18:52:28.392Z"
     },
     {
       "id": "cmwii06zf000flrqyxw82l9c4",
@@ -231,7 +231,7 @@
       "lastPracticedAt": null,
       "createdBy": "Setlist Dance & Talk 2026",
       "createdAt": "2026-11-16T00:01:18.172Z",
-      "updatedAt": "2026-11-16T17:20:15.498Z"
+      "updatedAt": "2026-11-16T18:52:28.393Z"
     },
     {
       "id": "cmwii06zg000glrqya7ms6khh",
@@ -242,11 +242,11 @@
       "soloists": "",
       "songType": "",
       "difficulty": "MEDIUM",
-      "notes": "Set 1 (Nr. 16) \u2022 Rhythmusgruppe ohne Bl\u00e4ser",
+      "notes": "Set 1 (Nr. 16) • Rhythmusgruppe ohne Bläser",
       "lastPracticedAt": null,
       "createdBy": "Setlist Dance & Talk 2026",
       "createdAt": "2026-11-16T00:01:18.172Z",
-      "updatedAt": "2026-11-16T17:20:15.499Z"
+      "updatedAt": "2026-11-16T18:52:28.394Z"
     },
     {
       "id": "cmwii06zg000hlrqy4zy4a2lq",
@@ -261,7 +261,7 @@
       "lastPracticedAt": null,
       "createdBy": "Setlist Dance & Talk 2026",
       "createdAt": "2026-11-16T00:01:18.173Z",
-      "updatedAt": "2026-11-16T17:20:15.500Z"
+      "updatedAt": "2026-11-16T18:52:28.395Z"
     },
     {
       "id": "cmwii06zh000ilrqyrzekmzx2",
@@ -276,7 +276,7 @@
       "lastPracticedAt": null,
       "createdBy": "Setlist Dance & Talk 2026",
       "createdAt": "2026-11-16T00:01:18.173Z",
-      "updatedAt": "2026-11-16T17:20:15.501Z"
+      "updatedAt": "2026-11-16T18:52:28.396Z"
     },
     {
       "id": "cmwii06zh000jlrqy29m204os",
@@ -287,11 +287,11 @@
       "soloists": "",
       "songType": "",
       "difficulty": "MEDIUM",
-      "notes": "Set 2 (Nr. 19) \u2022 Rhythmusgruppe ohne Bl\u00e4ser",
+      "notes": "Set 2 (Nr. 19) • Rhythmusgruppe ohne Bläser",
       "lastPracticedAt": null,
       "createdBy": "Setlist Dance & Talk 2026",
       "createdAt": "2026-11-16T00:01:18.174Z",
-      "updatedAt": "2026-11-16T17:20:15.501Z"
+      "updatedAt": "2026-11-16T18:52:28.397Z"
     },
     {
       "id": "cmwii06zi000klrqy640ulsp9",
@@ -306,7 +306,7 @@
       "lastPracticedAt": null,
       "createdBy": "Setlist Dance & Talk 2026",
       "createdAt": "2026-11-16T00:01:18.174Z",
-      "updatedAt": "2026-11-16T17:20:15.502Z"
+      "updatedAt": "2026-11-16T18:52:28.404Z"
     },
     {
       "id": "cmwii06zi000llrqy6gdex30u",
@@ -321,7 +321,7 @@
       "lastPracticedAt": null,
       "createdBy": "Setlist Dance & Talk 2026",
       "createdAt": "2026-11-16T00:01:18.175Z",
-      "updatedAt": "2026-11-16T17:20:15.503Z"
+      "updatedAt": "2026-11-16T18:52:28.406Z"
     },
     {
       "id": "cmwii06zj000mlrqyqum1oz5e",
@@ -336,7 +336,7 @@
       "lastPracticedAt": null,
       "createdBy": "Setlist Dance & Talk 2026",
       "createdAt": "2026-11-16T00:01:18.175Z",
-      "updatedAt": "2026-11-16T17:20:15.504Z"
+      "updatedAt": "2026-11-16T18:52:28.407Z"
     },
     {
       "id": "cmwii06zj000nlrqyso742g0f",
@@ -351,7 +351,7 @@
       "lastPracticedAt": null,
       "createdBy": "Setlist Dance & Talk 2026",
       "createdAt": "2026-11-16T00:01:18.176Z",
-      "updatedAt": "2026-11-16T17:20:15.505Z"
+      "updatedAt": "2026-11-16T18:52:28.408Z"
     },
     {
       "id": "cmwii06zk000olrqyt7av5n4l",
@@ -362,11 +362,11 @@
       "soloists": "",
       "songType": "",
       "difficulty": "MEDIUM",
-      "notes": "Set 2 (Nr. 24) \u2022 Rhythmusgruppe ohne Bl\u00e4ser",
+      "notes": "Set 2 (Nr. 24) • Rhythmusgruppe ohne Bläser",
       "lastPracticedAt": null,
       "createdBy": "Setlist Dance & Talk 2026",
       "createdAt": "2026-11-16T00:01:18.176Z",
-      "updatedAt": "2026-11-16T17:20:15.505Z"
+      "updatedAt": "2026-11-16T18:52:28.408Z"
     },
     {
       "id": "cmwii06zk000plrqyt4qtn5x3",
@@ -377,11 +377,11 @@
       "soloists": "",
       "songType": "Walzer",
       "difficulty": "MEDIUM",
-      "notes": "Set 2 (Nr. 25) \u2022 Rhythmusgruppe ohne Bl\u00e4ser",
+      "notes": "Set 2 (Nr. 25) • Rhythmusgruppe ohne Bläser",
       "lastPracticedAt": null,
       "createdBy": "Setlist Dance & Talk 2026",
       "createdAt": "2026-11-16T00:01:18.177Z",
-      "updatedAt": "2026-11-16T17:20:15.506Z"
+      "updatedAt": "2026-11-16T18:52:28.409Z"
     },
     {
       "id": "cmwii06zl000qlrqyl8ivtwxl",
@@ -392,11 +392,11 @@
       "soloists": "",
       "songType": "",
       "difficulty": "MEDIUM",
-      "notes": "Set 2 (Nr. 26) \u2022 Rhythmusgruppe ohne Bl\u00e4ser",
+      "notes": "Set 2 (Nr. 26) • Rhythmusgruppe ohne Bläser",
       "lastPracticedAt": null,
       "createdBy": "Setlist Dance & Talk 2026",
       "createdAt": "2026-11-16T00:01:18.177Z",
-      "updatedAt": "2026-11-16T17:20:15.507Z"
+      "updatedAt": "2026-11-16T18:52:28.41Z"
     },
     {
       "id": "cmwii06zl000rlrqyv8r21409",
@@ -411,7 +411,7 @@
       "lastPracticedAt": null,
       "createdBy": "Setlist Dance & Talk 2026",
       "createdAt": "2026-11-16T00:01:18.178Z",
-      "updatedAt": "2026-11-16T17:20:15.508Z"
+      "updatedAt": "2026-11-16T18:52:28.411Z"
     },
     {
       "id": "cmwii06zm000slrqyd635cdh4",
@@ -426,7 +426,7 @@
       "lastPracticedAt": null,
       "createdBy": "Setlist Dance & Talk 2026",
       "createdAt": "2026-11-16T00:01:18.178Z",
-      "updatedAt": "2026-11-16T17:20:15.509Z"
+      "updatedAt": "2026-11-16T18:52:28.412Z"
     },
     {
       "id": "cmwii06zm000tlrqyp0y18e5h",
@@ -441,7 +441,7 @@
       "lastPracticedAt": null,
       "createdBy": "Setlist Dance & Talk 2026",
       "createdAt": "2026-11-16T00:01:18.179Z",
-      "updatedAt": "2026-11-16T17:20:15.510Z"
+      "updatedAt": "2026-11-16T18:52:28.413Z"
     },
     {
       "id": "cmwii06zn000ulrqyw3g1aeup",
@@ -452,11 +452,11 @@
       "soloists": "",
       "songType": "",
       "difficulty": "MEDIUM",
-      "notes": "Set 2 (Nr. 30) \u2022 Duett",
+      "notes": "Set 2 (Nr. 30) • Duett",
       "lastPracticedAt": null,
       "createdBy": "Setlist Dance & Talk 2026",
       "createdAt": "2026-11-16T00:01:18.179Z",
-      "updatedAt": "2026-11-16T17:20:15.511Z"
+      "updatedAt": "2026-11-16T18:52:28.414Z"
     },
     {
       "id": "cmwii06zn000vlrqylsw7uk15",
@@ -467,11 +467,11 @@
       "soloists": "",
       "songType": "Instrumental",
       "difficulty": "MEDIUM",
-      "notes": "Set 3 (Nr. 31) \u2022 Instrumental",
+      "notes": "Set 3 (Nr. 31) • Instrumental",
       "lastPracticedAt": null,
       "createdBy": "Setlist Dance & Talk 2026",
-      "createdAt": "2026-11-16T00:01:18.180Z",
-      "updatedAt": "2026-11-16T17:20:15.512Z"
+      "createdAt": "2026-11-16T00:01:18.18Z",
+      "updatedAt": "2026-11-16T18:52:28.415Z"
     },
     {
       "id": "cmwii06zo000wlrqyfzcz51se",
@@ -482,11 +482,11 @@
       "soloists": "",
       "songType": "",
       "difficulty": "MEDIUM",
-      "notes": "Set 3 (Nr. 32) \u2022 Duett",
+      "notes": "Set 3 (Nr. 32) • Duett",
       "lastPracticedAt": null,
       "createdBy": "Setlist Dance & Talk 2026",
-      "createdAt": "2026-11-16T00:01:18.180Z",
-      "updatedAt": "2026-11-16T17:20:15.513Z"
+      "createdAt": "2026-11-16T00:01:18.18Z",
+      "updatedAt": "2026-11-16T18:52:28.416Z"
     },
     {
       "id": "cmwii06zp000xlrqymbydps65",
@@ -501,7 +501,7 @@
       "lastPracticedAt": null,
       "createdBy": "Setlist Dance & Talk 2026",
       "createdAt": "2026-11-16T00:01:18.181Z",
-      "updatedAt": "2026-11-16T17:20:15.514Z"
+      "updatedAt": "2026-11-16T18:52:28.417Z"
     },
     {
       "id": "cmwii06zp000ylrqylcnpsdkp",
@@ -512,11 +512,11 @@
       "soloists": "",
       "songType": "Instrumental",
       "difficulty": "MEDIUM",
-      "notes": "Set 3 (Nr. 34) \u2022 Instrumental",
+      "notes": "Set 3 (Nr. 34) • Instrumental",
       "lastPracticedAt": null,
       "createdBy": "Setlist Dance & Talk 2026",
       "createdAt": "2026-11-16T00:01:18.182Z",
-      "updatedAt": "2026-11-16T17:20:15.515Z"
+      "updatedAt": "2026-11-16T18:52:28.418Z"
     },
     {
       "id": "cmwii06zq000zlrqy1ysslgvr",
@@ -531,7 +531,7 @@
       "lastPracticedAt": null,
       "createdBy": "Setlist Dance & Talk 2026",
       "createdAt": "2026-11-16T00:01:18.182Z",
-      "updatedAt": "2026-11-16T17:20:15.515Z"
+      "updatedAt": "2026-11-16T18:52:28.418Z"
     },
     {
       "id": "cmwii06zq0010lrqytbs1s8q5",
@@ -546,7 +546,7 @@
       "lastPracticedAt": null,
       "createdBy": "Setlist Dance & Talk 2026",
       "createdAt": "2026-11-16T00:01:18.183Z",
-      "updatedAt": "2026-11-16T17:20:15.516Z"
+      "updatedAt": "2026-11-16T18:52:28.419Z"
     },
     {
       "id": "cmwii06zr0011lrqyacqomk4i",
@@ -557,11 +557,11 @@
       "soloists": "",
       "songType": "Foxtrott / Discofox",
       "difficulty": "MEDIUM",
-      "notes": "Set 3 (Nr. 37) \u2022 Duett",
+      "notes": "Set 3 (Nr. 37) • Duett",
       "lastPracticedAt": null,
       "createdBy": "Setlist Dance & Talk 2026",
       "createdAt": "2026-11-16T00:01:18.183Z",
-      "updatedAt": "2026-11-16T17:20:15.517Z"
+      "updatedAt": "2026-11-16T18:52:28.42Z"
     },
     {
       "id": "cmwii06zr0012lrqymqyrpwir",
@@ -576,7 +576,7 @@
       "lastPracticedAt": null,
       "createdBy": "Setlist Dance & Talk 2026",
       "createdAt": "2026-11-16T00:01:18.183Z",
-      "updatedAt": "2026-11-16T17:20:15.518Z"
+      "updatedAt": "2026-11-16T18:52:28.421Z"
     },
     {
       "id": "cmwii06zr0013lrqyzgapz2da",
@@ -587,11 +587,11 @@
       "soloists": "",
       "songType": "Walzer",
       "difficulty": "MEDIUM",
-      "notes": "Set 3 (Nr. 39) \u2022 Rhythmusgruppe ohne Bl\u00e4ser",
+      "notes": "Set 3 (Nr. 39) • Rhythmusgruppe ohne Bläser",
       "lastPracticedAt": null,
       "createdBy": "Setlist Dance & Talk 2026",
       "createdAt": "2026-11-16T00:01:18.184Z",
-      "updatedAt": "2026-11-16T17:20:15.519Z"
+      "updatedAt": "2026-11-16T18:52:28.422Z"
     },
     {
       "id": "cmwii06zs0014lrqy3wlhk603",
@@ -606,7 +606,7 @@
       "lastPracticedAt": null,
       "createdBy": "Setlist Dance & Talk 2026",
       "createdAt": "2026-11-16T00:01:18.184Z",
-      "updatedAt": "2026-11-16T17:20:15.520Z"
+      "updatedAt": "2026-11-16T18:52:28.422Z"
     },
     {
       "id": "cmwii06zs0015lrqy960o61zv",
@@ -621,7 +621,7 @@
       "lastPracticedAt": null,
       "createdBy": "Setlist Dance & Talk 2026",
       "createdAt": "2026-11-16T00:01:18.185Z",
-      "updatedAt": "2026-11-16T17:20:15.521Z"
+      "updatedAt": "2026-11-16T18:52:28.424Z"
     },
     {
       "id": "cmwii06zt0016lrqyye62n297",
@@ -632,11 +632,11 @@
       "soloists": "",
       "songType": "Discofox",
       "difficulty": "MEDIUM",
-      "notes": "Set 3 (Nr. 42) \u2022 Instrumental",
+      "notes": "Set 3 (Nr. 42) • Instrumental",
       "lastPracticedAt": null,
       "createdBy": "Setlist Dance & Talk 2026",
       "createdAt": "2026-11-16T00:01:18.185Z",
-      "updatedAt": "2026-11-16T17:20:15.521Z"
+      "updatedAt": "2026-11-16T18:52:28.425Z"
     },
     {
       "id": "cmwii06zt0017lrqyrx32wr3w",
@@ -651,7 +651,7 @@
       "lastPracticedAt": null,
       "createdBy": "Setlist Dance & Talk 2026",
       "createdAt": "2026-11-16T00:01:18.186Z",
-      "updatedAt": "2026-11-16T17:20:15.522Z"
+      "updatedAt": "2026-11-16T18:52:28.425Z"
     },
     {
       "id": "cmwii06zu0018lrqysu8z7e1u",
@@ -666,7 +666,7 @@
       "lastPracticedAt": null,
       "createdBy": "Setlist Dance & Talk 2026",
       "createdAt": "2026-11-16T00:01:18.186Z",
-      "updatedAt": "2026-11-16T17:20:15.523Z"
+      "updatedAt": "2026-11-16T18:52:28.426Z"
     }
   ],
   "votes": [
@@ -677,7 +677,7 @@
       "likeScore": 4,
       "confidenceScore": 3,
       "practiceNeededScore": 3,
-      "updatedAt": "2026-11-16T17:20:15.524Z"
+      "updatedAt": "2026-11-16T18:52:28.427Z"
     },
     {
       "id": "cmwjezlfa0046lrqylqfcgb50",
@@ -686,7 +686,7 @@
       "likeScore": 4,
       "confidenceScore": 5,
       "practiceNeededScore": 1,
-      "updatedAt": "2026-11-16T17:20:15.525Z"
+      "updatedAt": "2026-11-16T18:52:28.428Z"
     },
     {
       "id": "cmwjezux5005klrqy7f9ytf76",
@@ -695,7 +695,7 @@
       "likeScore": 4,
       "confidenceScore": 4,
       "practiceNeededScore": 2,
-      "updatedAt": "2026-11-16T17:20:15.525Z"
+      "updatedAt": "2026-11-16T18:52:28.429Z"
     },
     {
       "id": "cmwjf2kbv006ylrqye2r3xo1b",
@@ -703,8 +703,8 @@
       "pieceId": "cmwii06zt0016lrqyye62n297",
       "likeScore": 4,
       "confidenceScore": 4,
-      "practiceNeededScore": 4,
-      "updatedAt": "2026-11-16T17:20:15.526Z"
+      "practiceNeededScore": 2,
+      "updatedAt": "2026-11-16T18:57:13.139Z"
     },
     {
       "id": "cmwjm59e5001ezequoshv5tbi",
@@ -713,7 +713,7 @@
       "likeScore": 4,
       "confidenceScore": 3,
       "practiceNeededScore": 4,
-      "updatedAt": "2026-11-16T18:44:59.213Z"
+      "updatedAt": "2026-11-16T18:52:28.43Z"
     },
     {
       "id": "cmwjm5lq6002szequ27dbnw8x",
@@ -722,7 +722,7 @@
       "likeScore": 4,
       "confidenceScore": 3,
       "practiceNeededScore": 4,
-      "updatedAt": "2026-11-16T18:45:15.198Z"
+      "updatedAt": "2026-11-16T18:52:28.431Z"
     },
     {
       "id": "cmwjm5q7w0046zequa7dwcn3j",
@@ -731,7 +731,7 @@
       "likeScore": 4,
       "confidenceScore": 5,
       "practiceNeededScore": 2,
-      "updatedAt": "2026-11-16T18:45:21.020Z"
+      "updatedAt": "2026-11-16T18:52:28.432Z"
     },
     {
       "id": "cmwjm63a4005kzequjwje2o3z",
@@ -740,7 +740,7 @@
       "likeScore": 4,
       "confidenceScore": 5,
       "practiceNeededScore": 2,
-      "updatedAt": "2026-11-16T18:45:37.948Z"
+      "updatedAt": "2026-11-16T18:52:28.432Z"
     },
     {
       "id": "cmwjm67oo006yzequ1evmaz17",
@@ -749,7 +749,7 @@
       "likeScore": 4,
       "confidenceScore": 5,
       "practiceNeededScore": 1,
-      "updatedAt": "2026-11-16T18:45:43.656Z"
+      "updatedAt": "2026-11-16T18:52:28.433Z"
     },
     {
       "id": "cmwjm6buc008czequzkp918yn",
@@ -758,7 +758,7 @@
       "likeScore": 4,
       "confidenceScore": 5,
       "practiceNeededScore": 2,
-      "updatedAt": "2026-11-16T18:45:49.045Z"
+      "updatedAt": "2026-11-16T18:52:28.434Z"
     },
     {
       "id": "cmwjm6hhw009qzequh7d2o7ji",
@@ -767,7 +767,7 @@
       "likeScore": 4,
       "confidenceScore": 3,
       "practiceNeededScore": 4,
-      "updatedAt": "2026-11-16T18:45:56.373Z"
+      "updatedAt": "2026-11-16T18:52:28.434Z"
     }
   ],
   "rehearsalConfigs": [
@@ -776,18 +776,18 @@
       "planningMode": "SIMPLE_COUNT",
       "totalSessionsLeft": 4,
       "piecesPerSession": 6,
-      "updatedAt": "2026-11-16T18:43:53.894Z"
+      "updatedAt": "2026-11-16T18:57:01.579Z"
     }
   ],
   "concerts": [
     {
       "id": "cmwii06zu0019lrqyekubrcah",
-      "title": "BigBand MV Neumarkt \u2013 Dance & Talk 2026",
+      "title": "BigBand MV Neumarkt – Dance & Talk 2026",
       "scheduledDate": null,
       "location": "Neumarkt",
-      "additionalInfo": "Programm Dance & Talk 2026 (3 Sets mit 44 St\u00fccken: Nr. 1\u201316 Set 1, Pause, Nr. 17\u201330 Set 2, Pause, Nr. 31\u201344 Set 3).",
-      "createdAt": "2026-11-16T17:20:15.527Z",
-      "updatedAt": "2026-11-16T17:20:15.527Z"
+      "additionalInfo": "Programm Dance & Talk 2026 (3 Sets mit 44 Stücken: Nr. 1–16 Set 1, Pause, Nr. 17–30 Set 2, Pause, Nr. 31–44 Set 3).",
+      "createdAt": "2026-11-16T18:52:28.435Z",
+      "updatedAt": "2026-11-16T18:52:28.435Z"
     }
   ],
   "sessions": [
@@ -803,8 +803,8 @@
       "absentSoloists": "",
       "isLocked": false,
       "completedAt": null,
-      "createdAt": "2026-11-16T17:20:15.529Z",
-      "updatedAt": "2026-11-16T17:20:15.529Z"
+      "createdAt": "2026-11-16T18:52:28.437Z",
+      "updatedAt": "2026-11-16T18:52:28.437Z"
     },
     {
       "id": "cmwii070k001blrqyep3ll793",
@@ -818,8 +818,8 @@
       "absentSoloists": "",
       "isLocked": false,
       "completedAt": null,
-      "createdAt": "2026-11-16T17:20:15.530Z",
-      "updatedAt": "2026-11-16T17:20:15.530Z"
+      "createdAt": "2026-11-16T18:52:28.437Z",
+      "updatedAt": "2026-11-16T18:52:28.437Z"
     },
     {
       "id": "cmwii070s001clrqya8h5vtqs",
@@ -833,8 +833,8 @@
       "absentSoloists": "",
       "isLocked": false,
       "completedAt": null,
-      "createdAt": "2026-11-16T17:20:15.530Z",
-      "updatedAt": "2026-11-16T17:20:15.530Z"
+      "createdAt": "2026-11-16T18:52:28.438Z",
+      "updatedAt": "2026-11-16T18:52:28.438Z"
     },
     {
       "id": "cmwii070z001dlrqyykyhltch",
@@ -848,202 +848,202 @@
       "absentSoloists": "",
       "isLocked": false,
       "completedAt": null,
-      "createdAt": "2026-11-16T17:20:15.531Z",
-      "updatedAt": "2026-11-16T17:20:15.531Z"
+      "createdAt": "2026-11-16T18:52:28.438Z",
+      "updatedAt": "2026-11-16T18:52:28.438Z"
     }
   ],
   "sessionPieces": [
     {
-      "id": "cmwjm6hih009szequrebi0uy2",
+      "id": "cmwjmnbcl002s11csu2s44r7y",
       "sessionId": "cmwii070d001alrqy4x7357eo",
       "pieceId": "cmwii06zn000vlrqylsw7uk15",
       "sortOrder": 1,
       "isManualOverride": false,
-      "createdAt": "2026-11-16T18:45:56.393Z"
+      "createdAt": "2026-11-16T18:59:01.558Z"
     },
     {
-      "id": "cmwjm6hiq009uzequfqed5kom",
+      "id": "cmwjmnbcw002u11csx22dpsl8",
       "sessionId": "cmwii070d001alrqy4x7357eo",
       "pieceId": "cmwii06zq0010lrqytbs1s8q5",
       "sortOrder": 2,
       "isManualOverride": false,
-      "createdAt": "2026-11-16T18:45:56.402Z"
+      "createdAt": "2026-11-16T18:59:01.568Z"
     },
     {
-      "id": "cmwjm6hiw009wzequzvofbj3t",
+      "id": "cmwjmnbd6002w11cs654ub6v1",
       "sessionId": "cmwii070d001alrqy4x7357eo",
       "pieceId": "cmwii06zs0014lrqy3wlhk603",
       "sortOrder": 3,
       "isManualOverride": false,
-      "createdAt": "2026-11-16T18:45:56.409Z"
+      "createdAt": "2026-11-16T18:59:01.578Z"
     },
     {
-      "id": "cmwjm6hj5009yzequod6nhrql",
+      "id": "cmwjmnbdg002y11cswb0xjkxm",
       "sessionId": "cmwii070d001alrqy4x7357eo",
-      "pieceId": "cmwii06z40001lrqyhs9qnyxv",
+      "pieceId": "cmwii06zp000xlrqymbydps65",
       "sortOrder": 4,
       "isManualOverride": false,
-      "createdAt": "2026-11-16T18:45:56.417Z"
+      "createdAt": "2026-11-16T18:59:01.589Z"
     },
     {
-      "id": "cmwjm6hjd00a0zequqgcimiap",
+      "id": "cmwjmnbdq003011csieaxt703",
       "sessionId": "cmwii070d001alrqy4x7357eo",
-      "pieceId": "cmwii06z60002lrqysfvz5ugp",
+      "pieceId": "cmwii06zp000ylrqylcnpsdkp",
       "sortOrder": 5,
       "isManualOverride": false,
-      "createdAt": "2026-11-16T18:45:56.426Z"
+      "createdAt": "2026-11-16T18:59:01.598Z"
     },
     {
-      "id": "cmwjm6hjk00a2zequfalxt17k",
+      "id": "cmwjmnbe4003211csbfxrgfj8",
       "sessionId": "cmwii070d001alrqy4x7357eo",
-      "pieceId": "cmwii06z70003lrqyfp6q4n9x",
+      "pieceId": "cmwii06zr0011lrqyacqomk4i",
       "sortOrder": 6,
       "isManualOverride": false,
-      "createdAt": "2026-11-16T18:45:56.432Z"
+      "createdAt": "2026-11-16T18:59:01.612Z"
     },
     {
-      "id": "cmwjm6hk300a4zequxr5c37hk",
+      "id": "cmwjmnbek003411cs9n6ve9py",
+      "sessionId": "cmwii070k001blrqyep3ll793",
+      "pieceId": "cmwii06z40001lrqyhs9qnyxv",
+      "sortOrder": 1,
+      "isManualOverride": false,
+      "createdAt": "2026-11-16T18:59:01.629Z"
+    },
+    {
+      "id": "cmwjmnbf1003611csjqmbr3br",
+      "sessionId": "cmwii070k001blrqyep3ll793",
+      "pieceId": "cmwii06z60002lrqysfvz5ugp",
+      "sortOrder": 2,
+      "isManualOverride": false,
+      "createdAt": "2026-11-16T18:59:01.646Z"
+    },
+    {
+      "id": "cmwjmnbfb003811cszpq82sw2",
+      "sessionId": "cmwii070k001blrqyep3ll793",
+      "pieceId": "cmwii06z70003lrqyfp6q4n9x",
+      "sortOrder": 3,
+      "isManualOverride": false,
+      "createdAt": "2026-11-16T18:59:01.656Z"
+    },
+    {
+      "id": "cmwjmnbfm003a11css6bs8yww",
       "sessionId": "cmwii070k001blrqyep3ll793",
       "pieceId": "cmwii06z70004lrqyjvo38s8y",
-      "sortOrder": 1,
+      "sortOrder": 4,
       "isManualOverride": false,
-      "createdAt": "2026-11-16T18:45:56.451Z"
+      "createdAt": "2026-11-16T18:59:01.667Z"
     },
     {
-      "id": "cmwjm6hkb00a6zeque8k2in47",
+      "id": "cmwjmnbfz003c11csa0nf4xjf",
       "sessionId": "cmwii070k001blrqyep3ll793",
       "pieceId": "cmwii06z80005lrqyn9ss9kjr",
-      "sortOrder": 2,
+      "sortOrder": 5,
       "isManualOverride": false,
-      "createdAt": "2026-11-16T18:45:56.459Z"
+      "createdAt": "2026-11-16T18:59:01.679Z"
     },
     {
-      "id": "cmwjm6hki00a8zequm8odenih",
+      "id": "cmwjmnbgd003e11cshue02ai4",
       "sessionId": "cmwii070k001blrqyep3ll793",
       "pieceId": "cmwii06z90006lrqyw2nfca3j",
-      "sortOrder": 3,
-      "isManualOverride": false,
-      "createdAt": "2026-11-16T18:45:56.466Z"
-    },
-    {
-      "id": "cmwjm6hko00aazequ8l0wfmkt",
-      "sessionId": "cmwii070k001blrqyep3ll793",
-      "pieceId": "cmwii06za0007lrqynuq1s6h6",
-      "sortOrder": 4,
-      "isManualOverride": false,
-      "createdAt": "2026-11-16T18:45:56.473Z"
-    },
-    {
-      "id": "cmwjm6hky00aczequxmfc0z7b",
-      "sessionId": "cmwii070k001blrqyep3ll793",
-      "pieceId": "cmwii06zb0008lrqy5v7yeega",
-      "sortOrder": 5,
-      "isManualOverride": false,
-      "createdAt": "2026-11-16T18:45:56.482Z"
-    },
-    {
-      "id": "cmwjm6hl400aezequpus0p7xz",
-      "sessionId": "cmwii070k001blrqyep3ll793",
-      "pieceId": "cmwii06zc0009lrqysmh33np1",
       "sortOrder": 6,
       "isManualOverride": false,
-      "createdAt": "2026-11-16T18:45:56.488Z"
+      "createdAt": "2026-11-16T18:59:01.694Z"
     },
     {
-      "id": "cmwjm6hlg00agzequttmqc4sv",
+      "id": "cmwjmnbgx003g11csxo8nqk5x",
+      "sessionId": "cmwii070s001clrqya8h5vtqs",
+      "pieceId": "cmwii06za0007lrqynuq1s6h6",
+      "sortOrder": 1,
+      "isManualOverride": false,
+      "createdAt": "2026-11-16T18:59:01.713Z"
+    },
+    {
+      "id": "cmwjmnbh8003i11cst8ahjgqj",
+      "sessionId": "cmwii070s001clrqya8h5vtqs",
+      "pieceId": "cmwii06zb0008lrqy5v7yeega",
+      "sortOrder": 2,
+      "isManualOverride": false,
+      "createdAt": "2026-11-16T18:59:01.724Z"
+    },
+    {
+      "id": "cmwjmnbhl003k11csvv446nxe",
+      "sessionId": "cmwii070s001clrqya8h5vtqs",
+      "pieceId": "cmwii06zc0009lrqysmh33np1",
+      "sortOrder": 3,
+      "isManualOverride": false,
+      "createdAt": "2026-11-16T18:59:01.738Z"
+    },
+    {
+      "id": "cmwjmnbhs003m11cs8vsbdb7s",
       "sessionId": "cmwii070s001clrqya8h5vtqs",
       "pieceId": "cmwii06zc000alrqy5bhpjxyh",
-      "sortOrder": 1,
+      "sortOrder": 4,
       "isManualOverride": false,
-      "createdAt": "2026-11-16T18:45:56.501Z"
+      "createdAt": "2026-11-16T18:59:01.745Z"
     },
     {
-      "id": "cmwjm6hln00aizequ1pjw30uj",
+      "id": "cmwjmnbi1003o11cswi7vq5kd",
       "sessionId": "cmwii070s001clrqya8h5vtqs",
       "pieceId": "cmwii06zd000blrqy7h1iqikt",
-      "sortOrder": 2,
+      "sortOrder": 5,
       "isManualOverride": false,
-      "createdAt": "2026-11-16T18:45:56.507Z"
+      "createdAt": "2026-11-16T18:59:01.753Z"
     },
     {
-      "id": "cmwjm6hls00akzequgbfs1wdq",
+      "id": "cmwjmnbic003q11cs5r8qs1vk",
       "sessionId": "cmwii070s001clrqya8h5vtqs",
       "pieceId": "cmwii06zd000clrqyivkmuhgo",
-      "sortOrder": 3,
-      "isManualOverride": false,
-      "createdAt": "2026-11-16T18:45:56.513Z"
-    },
-    {
-      "id": "cmwjm6hly00amzequgjgxztb1",
-      "sessionId": "cmwii070s001clrqya8h5vtqs",
-      "pieceId": "cmwii06ze000dlrqyn7h5dho6",
-      "sortOrder": 4,
-      "isManualOverride": false,
-      "createdAt": "2026-11-16T18:45:56.519Z"
-    },
-    {
-      "id": "cmwjm6hm400aozequvlk36egx",
-      "sessionId": "cmwii070s001clrqya8h5vtqs",
-      "pieceId": "cmwii06zf000elrqyjh9zjh3x",
-      "sortOrder": 5,
-      "isManualOverride": false,
-      "createdAt": "2026-11-16T18:45:56.524Z"
-    },
-    {
-      "id": "cmwjm6hma00aqzequlxequne6",
-      "sessionId": "cmwii070s001clrqya8h5vtqs",
-      "pieceId": "cmwii06zf000flrqyxw82l9c4",
       "sortOrder": 6,
       "isManualOverride": false,
-      "createdAt": "2026-11-16T18:45:56.530Z"
+      "createdAt": "2026-11-16T18:59:01.764Z"
     },
     {
-      "id": "cmwjm6hmn00aszequi20enppd",
+      "id": "cmwjmnbiq003s11cs1a1el7y0",
       "sessionId": "cmwii070z001dlrqyykyhltch",
-      "pieceId": "cmwii06zg000glrqya7ms6khh",
+      "pieceId": "cmwii06ze000dlrqyn7h5dho6",
       "sortOrder": 1,
       "isManualOverride": false,
-      "createdAt": "2026-11-16T18:45:56.544Z"
+      "createdAt": "2026-11-16T18:59:01.779Z"
     },
     {
-      "id": "cmwjm6hmu00auzequt2uucl9m",
+      "id": "cmwjmnbix003u11csok9u5985",
       "sessionId": "cmwii070z001dlrqyykyhltch",
-      "pieceId": "cmwii06zg000hlrqy4zy4a2lq",
+      "pieceId": "cmwii06zf000elrqyjh9zjh3x",
       "sortOrder": 2,
       "isManualOverride": false,
-      "createdAt": "2026-11-16T18:45:56.551Z"
+      "createdAt": "2026-11-16T18:59:01.786Z"
     },
     {
-      "id": "cmwjm6hn000awzequ4ojf3efy",
+      "id": "cmwjmnbj7003w11cs0o82diq3",
       "sessionId": "cmwii070z001dlrqyykyhltch",
-      "pieceId": "cmwii06zh000ilrqyrzekmzx2",
+      "pieceId": "cmwii06zf000flrqyxw82l9c4",
       "sortOrder": 3,
       "isManualOverride": false,
-      "createdAt": "2026-11-16T18:45:56.557Z"
+      "createdAt": "2026-11-16T18:59:01.795Z"
     },
     {
-      "id": "cmwjm6hn600ayzequ9f7ny4ir",
+      "id": "cmwjmnbjg003y11cslowkkcqb",
       "sessionId": "cmwii070z001dlrqyykyhltch",
-      "pieceId": "cmwii06zh000jlrqy29m204os",
+      "pieceId": "cmwii06zg000glrqya7ms6khh",
       "sortOrder": 4,
       "isManualOverride": false,
-      "createdAt": "2026-11-16T18:45:56.563Z"
+      "createdAt": "2026-11-16T18:59:01.805Z"
     },
     {
-      "id": "cmwjm6hnf00b0zequv6x02nzh",
+      "id": "cmwjmnbjn004011csyqjm2m89",
       "sessionId": "cmwii070z001dlrqyykyhltch",
-      "pieceId": "cmwii06zi000klrqy640ulsp9",
+      "pieceId": "cmwii06zg000hlrqy4zy4a2lq",
       "sortOrder": 5,
       "isManualOverride": false,
-      "createdAt": "2026-11-16T18:45:56.571Z"
+      "createdAt": "2026-11-16T18:59:01.811Z"
     },
     {
-      "id": "cmwjm6hnk00b2zequqrcnnumv",
+      "id": "cmwjmnbju004211csg86vezkn",
       "sessionId": "cmwii070z001dlrqyykyhltch",
-      "pieceId": "cmwii06zi000llrqy6gdex30u",
+      "pieceId": "cmwii06zh000ilrqyrzekmzx2",
       "sortOrder": 6,
       "isManualOverride": false,
-      "createdAt": "2026-11-16T18:45:56.577Z"
+      "createdAt": "2026-11-16T18:59:01.819Z"
     }
   ],
   "logs": []

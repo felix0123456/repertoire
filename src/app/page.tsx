@@ -7,12 +7,14 @@ import {
   PieceItem,
   RehearsalConfigItem,
   RehearsalSessionItem,
+  SongProposalItem,
   SuggestionsData,
 } from "@/types";
 import RepertoireTab from "@/components/RepertoireTab";
 import ProbeplanTab from "@/components/ProbeplanTab";
 import TerminkalenderTab from "@/components/TerminkalenderTab";
 import HistorieTab from "@/components/HistorieTab";
+import LiedvorschlaegeTab from "@/components/LiedvorschlaegeTab";
 import OnboardingModal from "@/components/OnboardingModal";
 
 const STORAGE_USER_KEY = "repertoire_current_user_v1";
@@ -45,7 +47,7 @@ function markUserInitialOnboardingSeen(name: string): void {
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<
-    "repertoire" | "probeplan" | "kalender" | "historie"
+    "repertoire" | "probeplan" | "kalender" | "historie" | "vorschlaege"
   >("repertoire");
 
   const [currentUser, setCurrentUser] = useState<{
@@ -72,6 +74,7 @@ export default function HomePage() {
   });
   const [sessions, setSessions] = useState<RehearsalSessionItem[]>([]);
   const [concerts, setConcerts] = useState<ConcertEventItem[]>([]);
+  const [proposals, setProposals] = useState<SongProposalItem[]>([]);
   const [loading, setLoading] = useState(true);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -83,13 +86,18 @@ export default function HomePage() {
       try {
         const uid = overrideUserId ?? currentUser?.id ?? "";
         const uname = overrideUserName ?? currentUser?.name ?? "";
-        const [piecesRes, rehearsalsRes] = await Promise.all([
+        const [piecesRes, rehearsalsRes, proposalsRes] = await Promise.all([
           fetch(
             `/api/pieces?userId=${encodeURIComponent(
               uid
             )}&userName=${encodeURIComponent(uname)}`
           ),
           fetch("/api/rehearsals"),
+          fetch(
+            `/api/proposals?userId=${encodeURIComponent(
+              uid
+            )}&userName=${encodeURIComponent(uname)}`
+          ),
         ]);
 
         let fetchedPieces: PieceItem[] = [];
@@ -108,6 +116,12 @@ export default function HomePage() {
           setSessions(rData.sessions || []);
           setConcerts(rData.concerts || []);
         }
+
+        if (proposalsRes.ok) {
+          const propData = await proposalsRes.json();
+          setProposals(propData.proposals || []);
+        }
+
         return fetchedPieces;
       } catch (err) {
         console.error("Failed to fetch app data:", err);
@@ -258,6 +272,9 @@ export default function HomePage() {
   ).length;
   const completedSessionsCount = sessions.filter(
     (s) => s.status === "COMPLETED"
+  ).length;
+  const openProposalsCount = proposals.filter(
+    (p) => !p.myVote && !p.transferredPieceId
   ).length;
   const activeSession = sessions.find((s) => s.status === "ACTIVE");
   const nextConcert = concerts[0] || null;
@@ -469,7 +486,7 @@ export default function HomePage() {
           {/* Desktop Ledger Section Index Bar */}
           <nav
             aria-label="Hauptnavigation Desktop"
-            className="grid grid-cols-4 border-t border-[var(--rule-border)] bg-[var(--bg-surface)]"
+            className="grid grid-cols-5 border-t border-[var(--rule-border)] bg-[var(--bg-surface)]"
           >
             {(
               [
@@ -497,6 +514,16 @@ export default function HomePage() {
                   num: "04",
                   label: "Proben-Protokolle",
                   count: completedSessionsCount,
+                },
+                {
+                  id: "vorschlaege",
+                  num: "05",
+                  label: "Liedvorschläge & Swipe",
+                  count: proposals.length,
+                  badge:
+                    openProposalsCount > 0
+                      ? `${openProposalsCount} OFFEN`
+                      : undefined,
                 },
               ] as const
             ).map((tab) => {
@@ -613,6 +640,18 @@ export default function HomePage() {
                 }}
               />
             )}
+
+            {activeTab === "vorschlaege" && (
+              <LiedvorschlaegeTab
+                proposals={proposals}
+                suggestions={suggestions}
+                currentUser={currentUser}
+                onRefresh={async () => {
+                  await fetchAllData();
+                }}
+                onRequireLogin={() => setShowLoginModal(true)}
+              />
+            )}
           </>
         )}
       </main>
@@ -620,7 +659,7 @@ export default function HomePage() {
       {/* MOBILE FIXED BOTTOM TAB BAR (< 1024px) */}
       <nav
         aria-label="Mobile Hauptnavigation"
-        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t-2 border-[var(--rule-heavy)] bg-[var(--bg-surface)] lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t-2 border-[var(--rule-heavy)] bg-[var(--bg-surface)] lg:hidden"
       >
         {(
           [
@@ -648,6 +687,14 @@ export default function HomePage() {
               num: "04",
               shortLabel: "Protokolle",
               count: completedSessionsCount,
+            },
+            {
+              id: "vorschlaege",
+              num: "05",
+              shortLabel: "Swipe",
+              count: proposals.length,
+              badge:
+                openProposalsCount > 0 ? `${openProposalsCount}` : undefined,
             },
           ] as const
         ).map((tab) => {

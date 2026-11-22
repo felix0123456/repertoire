@@ -116,3 +116,57 @@ export interface SuggestionsData {
   songTypes: string[];
 }
 
+export type ProposalDecision = "YES" | "NO" | "SUPER";
+
+export interface SongProposalVoteItem {
+  id: string;
+  userId: string;
+  userName: string;
+  decision: ProposalDecision;
+  comment: string;
+  updatedAt: string;
+}
+
+export interface SongProposalItem {
+  id: string;
+  title: string;
+  artist: string;
+  platform: "YOUTUBE" | "SPOTIFY";
+  externalId: string;
+  sourceUrl: string;
+  embedUrl: string;
+  thumbnailUrl: string;
+  previewAudioUrl: string;
+  startSeconds: number;
+  notes: string;
+  proposedBy: string;
+  transferredPieceId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  yesCount: number;
+  superCount: number;
+  noCount: number;
+  totalVotes: number;
+  approvalPercent: number;
+  popularityScore: number;
+  myVote: {
+    decision: ProposalDecision;
+    comment: string;
+  } | null;
+  votes: SongProposalVoteItem[];
+}
+
+export interface ResolvedTrackMetadata {
+  title: string;
+  artist: string;
+  platform: "YOUTUBE" | "SPOTIFY";
+  externalId: string;
+  sourceUrl: string;
+  embedUrl: string;
+  thumbnailUrl: string;
+  previewAudioUrl: string;
+  startSeconds: number;
+  durationMs?: number;
+  alreadyExists?: boolean;
+}
+

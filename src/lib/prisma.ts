@@ -46,6 +46,8 @@ export async function savePersistentSnapshot(): Promise<void> {
       sessions,
       sessionPieces,
       logs,
+      songProposals,
+      songProposalVotes,
     ] = await Promise.all([
       prisma.user.findMany(),
       prisma.piece.findMany(),
@@ -55,6 +57,8 @@ export async function savePersistentSnapshot(): Promise<void> {
       prisma.rehearsalSession.findMany(),
       prisma.rehearsalSessionPiece.findMany(),
       prisma.rehearsalLog.findMany(),
+      prisma.songProposal.findMany(),
+      prisma.songProposalVote.findMany(),
     ]);
 
     const snapshot = {
@@ -67,6 +71,8 @@ export async function savePersistentSnapshot(): Promise<void> {
       sessions,
       sessionPieces,
       logs,
+      songProposals,
+      songProposalVotes,
     };
 
     const dataDir = getPersistentDataDir();
@@ -146,7 +152,10 @@ export async function ensurePersistentDataLoaded(): Promise<void> {
     const data = JSON.parse(raw);
     if (
       !data ||
-      (!data.pieces?.length && !data.concerts?.length && !data.users?.length)
+      (!data.pieces?.length &&
+        !data.concerts?.length &&
+        !data.users?.length &&
+        !data.songProposals?.length)
     ) {
       return;
     }
@@ -274,6 +283,48 @@ export async function ensurePersistentDataLoaded(): Promise<void> {
               newPracticeNeeded: l.newPracticeNeeded ?? 3,
               comment: l.comment || "",
               createdAt: l.createdAt ? new Date(l.createdAt) : new Date(),
+            },
+          });
+        }
+      }
+
+      if (Array.isArray(data.songProposals)) {
+        for (const sp of data.songProposals) {
+          await tx.songProposal.upsert({
+            where: { id: sp.id },
+            update: {},
+            create: {
+              id: sp.id,
+              title: sp.title || "",
+              artist: sp.artist || "",
+              platform: sp.platform || "YOUTUBE",
+              externalId: sp.externalId || "",
+              sourceUrl: sp.sourceUrl || "",
+              embedUrl: sp.embedUrl || "",
+              thumbnailUrl: sp.thumbnailUrl || "",
+              previewAudioUrl: sp.previewAudioUrl || "",
+              startSeconds: Number(sp.startSeconds ?? 0),
+              notes: sp.notes || "",
+              proposedBy: sp.proposedBy || "",
+              transferredPieceId: sp.transferredPieceId || null,
+              createdAt: sp.createdAt ? new Date(sp.createdAt) : new Date(),
+            },
+          });
+        }
+      }
+
+      if (Array.isArray(data.songProposalVotes)) {
+        for (const pv of data.songProposalVotes) {
+          await tx.songProposalVote.upsert({
+            where: { id: pv.id },
+            update: {},
+            create: {
+              id: pv.id,
+              proposalId: pv.proposalId,
+              userId: pv.userId,
+              decision: pv.decision || "YES",
+              comment: pv.comment || "",
+              updatedAt: pv.updatedAt ? new Date(pv.updatedAt) : new Date(),
             },
           });
         }

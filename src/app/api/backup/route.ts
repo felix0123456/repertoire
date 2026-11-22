@@ -12,6 +12,8 @@ export async function GET() {
       sessions,
       sessionPieces,
       logs,
+      songProposals,
+      songProposalVotes,
     ] = await Promise.all([
       prisma.user.findMany(),
       prisma.piece.findMany(),
@@ -21,6 +23,8 @@ export async function GET() {
       prisma.rehearsalSession.findMany(),
       prisma.rehearsalSessionPiece.findMany(),
       prisma.rehearsalLog.findMany(),
+      prisma.songProposal.findMany(),
+      prisma.songProposalVote.findMany(),
     ]);
 
     return NextResponse.json({
@@ -33,6 +37,8 @@ export async function GET() {
       sessions,
       sessionPieces,
       logs,
+      songProposals,
+      songProposalVotes,
     });
   } catch (error) {
     console.error("Error in GET /api/backup:", error);
@@ -54,6 +60,8 @@ export async function POST(req: NextRequest) {
     }
 
     await prisma.$transaction(async (tx) => {
+      await tx.songProposalVote.deleteMany();
+      await tx.songProposal.deleteMany();
       await tx.rehearsalLog.deleteMany();
       await tx.rehearsalSessionPiece.deleteMany();
       await tx.pieceVote.deleteMany();
@@ -174,6 +182,44 @@ export async function POST(req: NextRequest) {
               newPracticeNeeded: l.newPracticeNeeded ?? 3,
               comment: l.comment || "",
               createdAt: l.createdAt ? new Date(l.createdAt) : new Date(),
+            },
+          });
+        }
+      }
+
+      if (Array.isArray(data.songProposals)) {
+        for (const sp of data.songProposals) {
+          await tx.songProposal.create({
+            data: {
+              id: sp.id,
+              title: sp.title || "",
+              artist: sp.artist || "",
+              platform: sp.platform || "YOUTUBE",
+              externalId: sp.externalId || "",
+              sourceUrl: sp.sourceUrl || "",
+              embedUrl: sp.embedUrl || "",
+              thumbnailUrl: sp.thumbnailUrl || "",
+              previewAudioUrl: sp.previewAudioUrl || "",
+              startSeconds: Number(sp.startSeconds ?? 0),
+              notes: sp.notes || "",
+              proposedBy: sp.proposedBy || "",
+              transferredPieceId: sp.transferredPieceId || null,
+              createdAt: sp.createdAt ? new Date(sp.createdAt) : new Date(),
+            },
+          });
+        }
+      }
+
+      if (Array.isArray(data.songProposalVotes)) {
+        for (const pv of data.songProposalVotes) {
+          await tx.songProposalVote.create({
+            data: {
+              id: pv.id,
+              proposalId: pv.proposalId,
+              userId: pv.userId,
+              decision: pv.decision || "YES",
+              comment: pv.comment || "",
+              updatedAt: pv.updatedAt ? new Date(pv.updatedAt) : new Date(),
             },
           });
         }
