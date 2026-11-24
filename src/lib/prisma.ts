@@ -131,7 +131,11 @@ export async function ensurePersistentDataLoaded(): Promise<void> {
               soloists: "",
               songType: item.songType,
               difficulty: "MEDIUM",
+              bpm: 0,
               notes: item.notes,
+              referenceUrl: "",
+              focusInstruments: "",
+              measureNotesJson: "[]",
               createdBy: "Setlist Dance & Talk 2026",
             },
           });
@@ -141,6 +145,7 @@ export async function ensurePersistentDataLoaded(): Promise<void> {
             title: DEFAULT_CONCERT.title,
             location: DEFAULT_CONCERT.location,
             additionalInfo: DEFAULT_CONCERT.additionalInfo,
+            setlistJson: "[]",
           },
         });
       });
@@ -165,10 +170,14 @@ export async function ensurePersistentDataLoaded(): Promise<void> {
         for (const u of data.users) {
           await tx.user.upsert({
             where: { id: u.id },
-            update: { name: u.name },
+            update: {
+              name: u.name,
+              instrument: u.instrument || "",
+            },
             create: {
               id: u.id,
               name: u.name,
+              instrument: u.instrument || "",
               createdAt: u.createdAt ? new Date(u.createdAt) : new Date(),
             },
           });
@@ -190,7 +199,11 @@ export async function ensurePersistentDataLoaded(): Promise<void> {
               soloists: p.soloists || "",
               songType: p.songType || "",
               difficulty: p.difficulty || "MEDIUM",
+              bpm: Number(p.bpm ?? 0) || 0,
               notes: p.notes || "",
+              referenceUrl: p.referenceUrl || "",
+              focusInstruments: p.focusInstruments || "",
+              measureNotesJson: p.measureNotesJson || "[]",
               lastPracticedAt: p.lastPracticedAt
                 ? new Date(p.lastPracticedAt)
                 : null,
@@ -229,6 +242,8 @@ export async function ensurePersistentDataLoaded(): Promise<void> {
               scheduledDate: c.scheduledDate ? new Date(c.scheduledDate) : null,
               location: c.location || "",
               additionalInfo: c.additionalInfo || "",
+              setlistJson: c.setlistJson || "[]",
+              konzertmeisterId: c.konzertmeisterId || "",
             },
           });
         }
@@ -248,7 +263,13 @@ export async function ensurePersistentDataLoaded(): Promise<void> {
               additionalInfo: s.additionalInfo || "",
               presentSingers: s.presentSingers || "",
               absentSoloists: s.absentSoloists || "",
+              absentInstruments: s.absentInstruments || "",
               isLocked: Boolean(s.isLocked),
+              hasBreak: Boolean(s.hasBreak),
+              breakDurationMinutes: Number(s.breakDurationMinutes ?? 15) || 15,
+              breakAfterPieceIndex: Number(s.breakAfterPieceIndex ?? 3) || 3,
+              attendanceJson: s.attendanceJson || "[]",
+              konzertmeisterId: s.konzertmeisterId || "",
               completedAt: s.completedAt ? new Date(s.completedAt) : null,
             },
           });
@@ -264,6 +285,9 @@ export async function ensurePersistentDataLoaded(): Promise<void> {
               pieceId: sp.pieceId,
               sortOrder: sp.sortOrder ?? 1,
               isManualOverride: Boolean(sp.isManualOverride),
+              estimatedMinutes: Number(sp.estimatedMinutes ?? 0) || 0,
+              sessionBpm: Number(sp.sessionBpm ?? 0) || 0,
+              sessionBpmComment: sp.sessionBpmComment || "",
             },
           });
         }

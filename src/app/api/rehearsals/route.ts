@@ -6,11 +6,29 @@ import {
 } from "@/lib/prisma";
 import {
   calculatePiecePriority,
+  getEffectivePieceMinutes,
+  getUnderstaffedRegistersForSession,
   isPieceEligibleForSession,
   normalizeTags,
+  parseMeasureNotes,
+  parseSessionAttendance,
   recalculateSchedule,
   splitTags,
 } from "@/lib/scheduler";
+import { ConcertSetBlock } from "@/types";
+
+function parseConcertSetlist(
+  rawJson: string | null | undefined
+): ConcertSetBlock[] {
+  if (!rawJson) return [];
+  try {
+    const parsed = JSON.parse(rawJson);
+    if (!Array.isArray(parsed)) return [];
+    return parsed;
+  } catch {
+    return [];
+  }
+}
 
 export async function GET() {
   try {
@@ -35,7 +53,13 @@ export async function GET() {
         pieces: {
           include: {
             piece: {
-              include: { votes: true },
+              include: {
+                votes: {
+                  include: {
+                    user: { select: { id: true, name: true, instrument: true } },
+                  },
+                },
+              },
             },
           },
           orderBy: { sortOrder: "asc" },
@@ -55,22 +79,66 @@ export async function GET() {
       orderBy: [{ scheduledDate: "asc" }, { createdAt: "asc" }],
     });
 
+    // Track latest recorded session BPM per piece across sessions in chronological order
+    const lastBpmByPiece = new Map<
+      string,
+      { bpm: number; comment: string }
+    >();
+
     const formattedSessions = sessions.map((s) => {
       const presentSingerList = splitTags(s.presentSingers);
       const absentSoloistList = splitTags(s.absentSoloists);
+      const absentInstrumentList = splitTags(s.absentInstruments);
+      const attendance = parseSessionAttendance(s.attendanceJson);
+      const understaffedRegisterList = getUnderstaffedRegistersForSession(
+        s.absentInstruments,
+        s.attendanceJson
+      );
+
+      let piecesMinutesSum = 0;
 
       const enrichedPieces = s.pieces.map((sp) => {
         const stats = calculatePiecePriority(sp.piece);
         const eligibility = isPieceEligibleForSession(
           sp.piece,
           s.presentSingers,
-          s.absentSoloists
+          s.absentSoloists,
+          {
+            absentInstruments: s.absentInstruments,
+            attendanceJson: s.attendanceJson,
+          }
         );
+
+        const effectiveMinutes = getEffectivePieceMinutes(
+          sp.estimatedMinutes,
+          stats.avgPracticeNeeded,
+          stats.avgConfidence,
+          sp.piece.difficulty
+        );
+        piecesMinutesSum += effectiveMinutes;
+
+        const prevBpmEntry = lastBpmByPiece.get(sp.pieceId);
+        const lastSessionBpm = prevBpmEntry?.bpm || 0;
+        const lastSessionBpmComment = prevBpmEntry?.comment || "";
+
+        if (sp.sessionBpm > 0 || (sp.sessionBpmComment || "").trim()) {
+          lastBpmByPiece.set(sp.pieceId, {
+            bpm: sp.sessionBpm || prevBpmEntry?.bpm || 0,
+            comment: (sp.sessionBpmComment || "").trim(),
+          });
+        }
+
         return {
           id: sp.id,
           pieceId: sp.pieceId,
           sortOrder: sp.sortOrder,
           isManualOverride: sp.isManualOverride,
+          estimatedMinutes: sp.estimatedMinutes || 0,
+          effectiveMinutes,
+          sessionBpm: sp.sessionBpm || 0,
+          sessionBpmComment: sp.sessionBpmComment || "",
+          lastSessionBpm,
+          lastSessionBpmComment,
           eligible: eligibility.eligible,
           ineligibleReason: eligibility.reason || null,
           piece: {
@@ -84,7 +152,13 @@ export async function GET() {
             soloistList: splitTags(sp.piece.soloists),
             songType: sp.piece.songType,
             difficulty: sp.piece.difficulty,
+            bpm: sp.piece.bpm || 0,
             notes: sp.piece.notes,
+            referenceUrl: sp.piece.referenceUrl || "",
+            focusInstruments: sp.piece.focusInstruments || "",
+            focusInstrumentList: splitTags(sp.piece.focusInstruments),
+            measureNotes: parseMeasureNotes(sp.piece.measureNotesJson),
+            instrumentStats: stats.instrumentStats,
             lastPracticedAt: sp.piece.lastPracticedAt
               ? sp.piece.lastPracticedAt.toISOString()
               : null,
@@ -96,6 +170,9 @@ export async function GET() {
           },
         };
       });
+
+      const breakMins = s.hasBreak ? Math.max(5, s.breakDurationMinutes || 15) : 0;
+      const totalEstimatedMinutes = piecesMinutesSum + breakMins;
 
       return {
         id: s.id,
@@ -109,7 +186,16 @@ export async function GET() {
         presentSingerList,
         absentSoloists: s.absentSoloists,
         absentSoloistList,
+        absentInstruments: s.absentInstruments || "",
+        absentInstrumentList,
+        understaffedRegisterList,
         isLocked: s.isLocked,
+        hasBreak: Boolean(s.hasBreak),
+        breakDurationMinutes: s.breakDurationMinutes || 15,
+        breakAfterPieceIndex: s.breakAfterPieceIndex || 3,
+        attendance,
+        konzertmeisterId: s.konzertmeisterId || "",
+        totalEstimatedMinutes,
         completedAt: s.completedAt ? s.completedAt.toISOString() : null,
         pieces: enrichedPieces,
         logs: s.logs.map((l) => ({
@@ -137,6 +223,8 @@ export async function GET() {
         scheduledDate: c.scheduledDate ? c.scheduledDate.toISOString() : null,
         location: c.location,
         additionalInfo: c.additionalInfo,
+        setlist: parseConcertSetlist(c.setlistJson),
+        konzertmeisterId: c.konzertmeisterId || "",
       })),
     });
   } catch (error) {
@@ -208,11 +296,20 @@ export async function POST(req: NextRequest) {
           additionalInfo: (body.additionalInfo || "").trim(),
           presentSingers: normalizeTags(body.presentSingers || ""),
           absentSoloists: normalizeTags(body.absentSoloists || ""),
+          absentInstruments: normalizeTags(body.absentInstruments || ""),
+          hasBreak: Boolean(body.hasBreak),
+          breakDurationMinutes: Math.max(
+            5,
+            Math.min(60, Number(body.breakDurationMinutes) || 15)
+          ),
+          breakAfterPieceIndex: Math.max(
+            1,
+            Number(body.breakAfterPieceIndex) || 3
+          ),
           isLocked: isManual,
         },
       });
 
-      // Update totalSessionsLeft count to reflect active/planned sessions
       const nonCompletedCount = await prisma.rehearsalSession.count({
         where: { status: { not: "COMPLETED" } },
       });
@@ -237,7 +334,6 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "recalculate-all") {
-      // Unlock all PLANNED sessions if user explicitly requests full recalculation
       if (body.unlockAll) {
         await prisma.rehearsalSession.updateMany({
           where: { status: "PLANNED" },
@@ -257,4 +353,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-

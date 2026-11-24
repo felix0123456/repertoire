@@ -13,7 +13,11 @@ import {
   List,
   Share2,
 } from "lucide-react";
-import { PieceItem, SuggestionsData } from "@/types";
+import {
+  getInstrumentSection,
+  PieceItem,
+  SuggestionsData,
+} from "@/types";
 import ScoreSelector from "./ScoreSelector";
 import { buildAppShareUrl, shareOrCopyLink } from "@/lib/share";
 
@@ -22,7 +26,8 @@ interface OnboardingModalProps {
   onClose: () => void;
   pieces: PieceItem[];
   suggestions: SuggestionsData;
-  currentUser: { id: string; name: string };
+  currentUser: { id: string; name: string; instrument?: string };
+  userInstrument?: string;
   onRefresh: () => Promise<void>;
 }
 
@@ -41,8 +46,16 @@ export default function OnboardingModal({
   pieces,
   suggestions,
   currentUser,
+  userInstrument,
   onRefresh,
 }: OnboardingModalProps) {
+  const effectiveInstrument = (
+    userInstrument ??
+    currentUser?.instrument ??
+    ""
+  ).trim();
+  const isHornPlayer = getInstrumentSection(effectiveInstrument) === "BLAESER";
+
   // 2-stage flow: "setup" first, then "cards" (or "table")
   const [step, setStep] = useState<"setup" | "cards" | "table">("setup");
   const [ratingMode, setRatingMode] = useState<"simple" | "full">("simple");
@@ -52,7 +65,8 @@ export default function OnboardingModal({
   );
   const [singerFilter, setSingerFilter] = useState<string>("");
   const [songTypeFilter, setSongTypeFilter] = useState<string>("");
-  const [excludeRhythmOnly, setExcludeRhythmOnly] = useState<boolean>(false);
+  const [hideRhythmOnlyWithoutHorns, setHideRhythmOnlyWithoutHorns] =
+    useState<boolean>(() => isHornPlayer);
   const [searchQuery, setSearchQuery] = useState<string>("");
 
   const [skippedIds, setSkippedIds] = useState<string[]>([]);
@@ -87,8 +101,11 @@ export default function OnboardingModal({
     if (isOpen) {
       setStep("setup");
       setCurrentIndex(0);
+      setHideRhythmOnlyWithoutHorns(
+        getInstrumentSection(effectiveInstrument) === "BLAESER"
+      );
     }
-  }, [isOpen]);
+  }, [isOpen, effectiveInstrument]);
 
   // Load saved ratingMode & skipped piece IDs from localStorage
   useEffect(() => {
@@ -182,8 +199,13 @@ export default function OnboardingModal({
         if (!list.includes(songTypeFilter.toLowerCase())) return false;
       }
 
-      if (excludeRhythmOnly) {
-        if (p.notes.toLowerCase().includes("ohne bläser")) return false;
+      if (hideRhythmOnlyWithoutHorns) {
+        if (
+          p.notes.toLowerCase().includes("ohne bläser") ||
+          p.singers.toLowerCase().includes("ohne bläser")
+        ) {
+          return false;
+        }
       }
 
       if (searchQuery.trim()) {
@@ -202,7 +224,7 @@ export default function OnboardingModal({
     scopeFilter,
     singerFilter,
     songTypeFilter,
-    excludeRhythmOnly,
+    hideRhythmOnlyWithoutHorns,
     searchQuery,
   ]);
 
@@ -492,20 +514,27 @@ export default function OnboardingModal({
                     </select>
                   </div>
 
-                  <label className="flex items-center gap-2 border border-[var(--rule-border)] bg-[var(--bg-paper)] px-3 py-2 text-xs text-[var(--ink-primary)] cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={excludeRhythmOnly}
-                      onChange={(e) => {
-                        setExcludeRhythmOnly(e.target.checked);
-                        setCurrentIndex(0);
-                      }}
-                      className="h-4 w-4 accent-[var(--accent)]"
-                    />
-                    <span>
-                      Stücke mit „Rhythmusgruppe ohne Bläser“ ausblenden
-                    </span>
+                  <label className="flex items-center justify-between gap-2 border border-[var(--rule-border)] bg-[var(--bg-paper)] px-3 py-2 text-xs text-[var(--ink-primary)] cursor-pointer">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={hideRhythmOnlyWithoutHorns}
+                        onChange={(e) => {
+                          setHideRhythmOnlyWithoutHorns(e.target.checked);
+                          setCurrentIndex(0);
+                        }}
+                        className="h-4 w-4 accent-[var(--accent)]"
+                      />
+                      <span>
+                        Stücke mit „Rhythmusgruppe ohne Bläser“ ausblenden
+                      </span>
+                    </div>
                   </label>
+                  {isHornPlayer && hideRhythmOnlyWithoutHorns && (
+                    <div className="type-kicker border border-[var(--ink-primary)] bg-[var(--bg-recessed)] px-2.5 py-1.5 text-[10px] text-[var(--ink-primary)]">
+                      🎺 Bläser-Profil erkannt: Rhythmus-Stücke ohne Bläser ausgeblendet
+                    </div>
+                  )}
                 </div>
               </div>
 

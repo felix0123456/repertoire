@@ -206,7 +206,9 @@ export async function POST(req: NextRequest) {
           soloists,
           songType,
           difficulty,
+          bpm: Math.max(0, Math.min(400, Math.round(Number(body.bpm) || 0))),
           notes,
+          referenceUrl: String(body.referenceUrl || proposal.sourceUrl || "").trim(),
           createdBy,
         },
       });

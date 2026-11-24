@@ -11,8 +11,17 @@ import {
   ChevronUp,
   Share2,
   Check,
+  Play,
+  ExternalLink,
 } from "lucide-react";
-import { PieceItem, SuggestionsData } from "@/types";
+import {
+  BIGBAND_INSTRUMENTS,
+  BIGBAND_REGISTER_FAMILIES,
+  getRegisterFamily,
+  InstrumentPracticeStat,
+  PieceItem,
+  SuggestionsData,
+} from "@/types";
 import TagInput from "./TagInput";
 import ScoreSelector from "./ScoreSelector";
 import { buildAppShareUrl, shareOrCopyLink } from "@/lib/share";
@@ -20,7 +29,7 @@ import { buildAppShareUrl, shareOrCopyLink } from "@/lib/share";
 interface RepertoireTabProps {
   pieces: PieceItem[];
   suggestions: SuggestionsData;
-  currentUser: { id: string; name: string } | null;
+  currentUser: { id: string; name: string; instrument?: string } | null;
   onRefresh: () => Promise<void>;
   onRequireLogin: () => void;
   onOpenOnboarding?: () => void;
@@ -40,6 +49,54 @@ const DIFFICULTY_ORDER: Record<string, number> = {
   HARD: 3,
 };
 
+function getInstrumentMatchingStat(
+  piece: PieceItem,
+  instrumentFilter: string
+): InstrumentPracticeStat | null {
+  if (!instrumentFilter) return null;
+  const low = instrumentFilter.toLowerCase();
+  const fam = getRegisterFamily(instrumentFilter).toLowerCase();
+  const exactMatches = piece.instrumentStats.filter(
+    (st) => st.instrument.toLowerCase() === low
+  );
+  const candidates =
+    exactMatches.length > 0
+      ? exactMatches
+      : piece.instrumentStats.filter(
+          (st) =>
+            st.registerFamily.toLowerCase() === low ||
+            (fam && st.registerFamily.toLowerCase() === fam)
+        );
+  if (candidates.length === 0) return null;
+  return [...candidates].sort((a, b) => {
+    const scoreA =
+      (a.avgPracticeNeeded >= 3.5 || a.isFlaggedFocus ? 100 : 0) +
+      (a.isFlaggedFocus ? 10 : 0) +
+      a.avgPracticeNeeded;
+    const scoreB =
+      (b.avgPracticeNeeded >= 3.5 || b.isFlaggedFocus ? 100 : 0) +
+      (b.isFlaggedFocus ? 10 : 0) +
+      b.avgPracticeNeeded;
+    return scoreB - scoreA;
+  })[0];
+}
+
+function buildInlineEmbedUrl(url: string): string | null {
+  const clean = (url || "").trim();
+  if (!clean) return null;
+  const ytMatch = clean.match(
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([A-Za-z0-9_-]{6,})/i
+  );
+  if (ytMatch) {
+    return `https://www.youtube.com/embed/${ytMatch[1]}`;
+  }
+  const spMatch = clean.match(/spotify\.com\/(?:intl-[a-z]+\/)?track\/([A-Za-z0-9]+)/i);
+  if (spMatch) {
+    return `https://open.spotify.com/embed/track/${spMatch[1]}?utm_source=generator`;
+  }
+  return null;
+}
+
 export default function RepertoireTab({
   pieces,
   suggestions,
@@ -55,6 +112,9 @@ export default function RepertoireTab({
   const [filterSoloist, setFilterSoloist] = useState("");
   const [filterSongType, setFilterSongType] = useState("");
   const [filterDifficulty, setFilterDifficulty] = useState("");
+  const [filterInstrument, setFilterInstrument] = useState("");
+  const [filterHighPractice, setFilterHighPractice] = useState(false);
+  const [filterHasReference, setFilterHasReference] = useState(false);
 
   const [sortBy, setSortBy] = useState<
     | "priority"
@@ -68,6 +128,7 @@ export default function RepertoireTab({
     | "songType"
     | "lastPracticed"
     | "title"
+    | "instrumentPractice"
   >("priority");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
@@ -76,6 +137,30 @@ export default function RepertoireTab({
   const [expandedVotesPieceId, setExpandedVotesPieceId] = useState<
     string | null
   >(null);
+  const [expandedNotesPieceId, setExpandedNotesPieceId] = useState<
+    string | null
+  >(null);
+  const [expandedReferencePieceId, setExpandedReferencePieceId] = useState<
+    string | null
+  >(null);
+  const [focusEditorPieceId, setFocusEditorPieceId] = useState<string | null>(
+    null
+  );
+  const [measureInput, setMeasureInput] = useState("");
+  const [measureInstrumentInput, setMeasureInstrumentInput] = useState(
+    currentUser?.instrument || "Tutti"
+  );
+  const [measureNoteText, setMeasureNoteText] = useState("");
+  const [savingMeasureNoteId, setSavingMeasureNoteId] = useState<string | null>(
+    null
+  );
+
+  useEffect(() => {
+    if (currentUser?.instrument) {
+      setMeasureInstrumentInput(currentUser.instrument);
+    }
+  }, [currentUser?.instrument]);
+
   const [savingVoteId, setSavingVoteId] = useState<string | null>(null);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [openMobileVotePieceId, setOpenMobileVotePieceId] = useState<
@@ -164,6 +249,10 @@ export default function RepertoireTab({
   const [difficulty, setDifficulty] = useState<"EASY" | "MEDIUM" | "HARD">(
     "MEDIUM"
   );
+  const [bpmInput, setBpmInput] = useState<string>("");
+  const [referenceUrlInput, setReferenceUrlInput] = useState<string>("");
+  const [focusInstrumentsInput, setFocusInstrumentsInput] =
+    useState<string>("");
   const [notes, setNotes] = useState("");
   const [initLike, setInitLike] = useState(4);
   const [initConfidence, setInitConfidence] = useState(3);
@@ -179,6 +268,9 @@ export default function RepertoireTab({
     setSoloists("");
     setSongType("");
     setDifficulty("MEDIUM");
+    setBpmInput("");
+    setReferenceUrlInput("");
+    setFocusInstrumentsInput("");
     setNotes("");
     setInitLike(4);
     setInitConfidence(3);
@@ -195,6 +287,9 @@ export default function RepertoireTab({
     setSoloists(p.soloists);
     setSongType(p.songType);
     setDifficulty(p.difficulty);
+    setBpmInput(p.bpm > 0 ? String(p.bpm) : "");
+    setReferenceUrlInput(p.referenceUrl || "");
+    setFocusInstrumentsInput(p.focusInstruments || "");
     setNotes(p.notes);
     setShowModal(true);
   };
@@ -204,6 +299,10 @@ export default function RepertoireTab({
     if (!title.trim()) return;
     setSubmitting(true);
     try {
+      const parsedBpm = Math.max(
+        0,
+        Math.min(400, Math.round(Number(bpmInput) || 0))
+      );
       if (editingPiece) {
         await fetch(`/api/pieces/${editingPiece.id}`, {
           method: "PATCH",
@@ -216,6 +315,9 @@ export default function RepertoireTab({
             soloists,
             songType,
             difficulty,
+            bpm: parsedBpm,
+            referenceUrl: referenceUrlInput.trim(),
+            focusInstruments: focusInstrumentsInput.trim(),
             notes,
           }),
         });
@@ -231,6 +333,9 @@ export default function RepertoireTab({
             soloists,
             songType,
             difficulty,
+            bpm: parsedBpm,
+            referenceUrl: referenceUrlInput.trim(),
+            focusInstruments: focusInstrumentsInput.trim(),
             notes,
             createdBy: currentUser?.name || "",
             userId: currentUser?.id,
@@ -244,6 +349,68 @@ export default function RepertoireTab({
       await onRefresh();
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleToggleFocusInstrument = async (
+    piece: PieceItem,
+    instrument: string
+  ) => {
+    const current = piece.focusInstrumentList;
+    const exists = current.some(
+      (i) => i.toLowerCase() === instrument.toLowerCase()
+    );
+    const next = exists
+      ? current.filter((i) => i.toLowerCase() !== instrument.toLowerCase())
+      : [...current, instrument];
+    await fetch(`/api/pieces/${piece.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        focusInstruments: next.join(", "),
+      }),
+    });
+    await onRefresh();
+  };
+
+  const handleAddMeasureNote = async (piece: PieceItem) => {
+    const cleanNote = measureNoteText.trim();
+    if (!cleanNote) return;
+    setSavingMeasureNoteId(piece.id);
+    try {
+      await fetch(`/api/pieces/${piece.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          addMeasureNote: {
+            measure: measureInput.trim() || "Allgemein",
+            instrument: measureInstrumentInput,
+            note: cleanNote,
+            author: currentUser?.name || "Ensemble",
+          },
+        }),
+      });
+      setMeasureInput("");
+      setMeasureNoteText("");
+      await onRefresh();
+    } finally {
+      setSavingMeasureNoteId(null);
+    }
+  };
+
+  const handleRemoveMeasureNote = async (piece: PieceItem, noteId: string) => {
+    setSavingMeasureNoteId(piece.id);
+    try {
+      await fetch(`/api/pieces/${piece.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          removeMeasureNoteId: noteId,
+        }),
+      });
+      await onRefresh();
+    } finally {
+      setSavingMeasureNoteId(null);
     }
   };
 
@@ -292,12 +459,81 @@ export default function RepertoireTab({
     }
   };
 
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (search.trim()) count++;
+    if (filterSinger) count++;
+    if (filterSoloist) count++;
+    if (filterSongType) count++;
+    if (filterDifficulty) count++;
+    if (filterInstrument) count++;
+    if (filterHighPractice) count++;
+    if (filterHasReference) count++;
+    return count;
+  }, [
+    search,
+    filterSinger,
+    filterSoloist,
+    filterSongType,
+    filterDifficulty,
+    filterInstrument,
+    filterHighPractice,
+    filterHasReference,
+  ]);
+
   const filteredAndSortedPieces = useMemo(() => {
     const q = search.trim().toLowerCase();
+    const lowInst = filterInstrument.trim().toLowerCase();
+    const famInst = filterInstrument
+      ? getRegisterFamily(filterInstrument).toLowerCase()
+      : "";
+
+    const isPieceHighNeedForInstrument = (p: PieceItem): boolean => {
+      if (!lowInst) return false;
+      const st = getInstrumentMatchingStat(p, filterInstrument);
+      if (st && (st.avgPracticeNeeded >= 3.5 || st.isFlaggedFocus)) {
+        return true;
+      }
+      return p.focusInstrumentList.some(
+        (fi) =>
+          fi.toLowerCase() === lowInst ||
+          getRegisterFamily(fi).toLowerCase() === lowInst ||
+          (famInst && getRegisterFamily(fi).toLowerCase() === famInst)
+      );
+    };
+
+    const isPieceRelevantForInstrument = (p: PieceItem): boolean => {
+      if (!lowInst) return true;
+      if (isPieceHighNeedForInstrument(p)) return true;
+      const st = getInstrumentMatchingStat(p, filterInstrument);
+      const hasMeasureNote = p.measureNotes.some(
+        (mn) =>
+          mn.instrument.toLowerCase() === lowInst ||
+          getRegisterFamily(mn.instrument).toLowerCase() === lowInst ||
+          (famInst && getRegisterFamily(mn.instrument).toLowerCase() === famInst)
+      );
+      const isSoloist = p.soloistList.some(
+        (sol) =>
+          sol.toLowerCase().includes(lowInst) ||
+          (famInst && sol.toLowerCase().includes(famInst))
+      );
+      return Boolean(st || hasMeasureNote || isSoloist);
+    };
+
+    const hasAnyHighNeedMatches = lowInst
+      ? pieces.some((p) => isPieceHighNeedForInstrument(p))
+      : false;
+    const hasAnyRelevantMatches = lowInst
+      ? pieces.some((p) => isPieceRelevantForInstrument(p))
+      : false;
+
     const list = pieces.filter((p) => {
       if (q) {
+        const measureHay = p.measureNotes
+          .map((m) => `${m.measure} ${m.instrument} ${m.note}`)
+          .join(" ");
         const hay =
-          `${p.title} ${p.folderNumber} ${p.artist} ${p.singers} ${p.soloists} ${p.songType} ${p.notes}`.toLowerCase();
+          `${p.title} ${p.folderNumber} ${p.artist} ${p.singers} ${p.soloists} ${p.songType} ${p.notes} ${p.focusInstruments} ${measureHay}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       if (
@@ -325,10 +561,37 @@ export default function RepertoireTab({
       if (filterDifficulty && p.difficulty !== filterDifficulty) {
         return false;
       }
+      if (filterHighPractice && p.avgPracticeNeeded < 3.5) {
+        return false;
+      }
+      if (filterHasReference && !p.referenceUrl?.trim()) {
+        return false;
+      }
+      if (lowInst) {
+        if (hasAnyHighNeedMatches) {
+          if (!isPieceHighNeedForInstrument(p)) return false;
+        } else if (hasAnyRelevantMatches) {
+          if (!isPieceRelevantForInstrument(p)) return false;
+        }
+      }
       return true;
     });
 
     list.sort((a, b) => {
+      if (lowInst) {
+        const stA = getInstrumentMatchingStat(a, filterInstrument);
+        const stB = getInstrumentMatchingStat(b, filterInstrument);
+        const highA = isPieceHighNeedForInstrument(a) ? 100 : 0;
+        const highB = isPieceHighNeedForInstrument(b) ? 100 : 0;
+        const scoreA =
+          highA + (stA?.isFlaggedFocus ? 10 : 0) + (stA?.avgPracticeNeeded || 0);
+        const scoreB =
+          highB + (stB?.isFlaggedFocus ? 10 : 0) + (stB?.avgPracticeNeeded || 0);
+        if (Math.abs(scoreB - scoreA) > 0.05) {
+          return scoreB - scoreA;
+        }
+      }
+
       let cmp = 0;
       switch (sortBy) {
         case "priority":
@@ -345,6 +608,7 @@ export default function RepertoireTab({
           cmp = a.avgLike - b.avgLike;
           break;
         case "practice":
+        case "instrumentPractice":
           cmp = a.avgPracticeNeeded - b.avgPracticeNeeded;
           break;
         case "confidence":
@@ -390,6 +654,9 @@ export default function RepertoireTab({
     filterSoloist,
     filterSongType,
     filterDifficulty,
+    filterInstrument,
+    filterHighPractice,
+    filterHasReference,
     sortBy,
     sortDir,
   ]);
@@ -399,75 +666,161 @@ export default function RepertoireTab({
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-8">
       {/* Left Rail: Columns 1–4 */}
       <aside className="lg:col-span-4">
-        {/* MOBILE COMPACT ACTION & SEARCH BAR (< 1024px) */}
-        <div className="mb-2 flex items-center gap-1.5 border border-[var(--ink-primary)] bg-[var(--bg-surface)] p-2 lg:hidden">
-          <div className="relative flex-1 min-w-0">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--ink-muted)]" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Stück, Sänger, Typ..."
-              className="w-full border border-[var(--rule-border)] bg-[var(--bg-paper)] py-1.5 pl-8 pr-2 text-xs text-[var(--ink-primary)] placeholder-[var(--ink-muted)] focus:border-[var(--ink-primary)] focus:outline-none"
-            />
+        {/* MOBILE COMPACT ACTION & SEARCH BAR (< 768px) */}
+        <div className="mb-2 space-y-2 border border-[var(--ink-primary)] bg-[var(--bg-surface)] p-2 md:hidden">
+          <div className="flex items-center gap-1.5">
+            <div className="relative flex-1 min-w-0">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--ink-muted)]" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Stück, Sänger, Typ, Takt..."
+                className="w-full border border-[var(--rule-border)] bg-[var(--bg-paper)] py-1.5 pl-8 pr-2 text-xs text-[var(--ink-primary)] placeholder-[var(--ink-muted)] focus:border-[var(--ink-primary)] focus:outline-none"
+              />
+            </div>
+
+            {onOpenOnboarding && pieces.length > 0 && (
+              <>
+                <button
+                  type="button"
+                  onClick={onOpenOnboarding}
+                  title="Bewertungs-Onboarding"
+                  className="type-kicker shrink-0 border border-[var(--ink-primary)] bg-[var(--bg-paper)] px-2 py-1.5 text-[10px] font-bold text-[var(--ink-primary)] cursor-pointer"
+                >
+                  ★{" "}
+                  {currentUser
+                    ? pieces.filter((p) => !p.myVote).length
+                    : pieces.length}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleShareOnboardingLink}
+                  title="Direktlink zur Repertoire-Abstimmung kopieren"
+                  className={`type-kicker inline-flex shrink-0 items-center gap-1 border px-2 py-1.5 text-[10px] cursor-pointer ${
+                    copiedShareKey === "__ONBOARDING__"
+                      ? "border-[var(--ink-primary)] bg-[var(--ink-primary)] font-bold text-[var(--bg-surface)]"
+                      : "border-[var(--rule-border)] bg-[var(--bg-paper)] text-[var(--ink-primary)]"
+                  }`}
+                >
+                  {copiedShareKey === "__ONBOARDING__" ? (
+                    <Check className="h-3 w-3" />
+                  ) : (
+                    <Share2 className="h-3 w-3" />
+                  )}
+                </button>
+              </>
+            )}
+
+            <button
+              type="button"
+              onClick={openCreateModal}
+              className="type-kicker inline-flex shrink-0 items-center gap-1 bg-[var(--accent)] px-2.5 py-1.5 text-[10px] text-[var(--accent-ink)] cursor-pointer"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              NEU
+            </button>
+          </div>
+
+          {/* Horizontal Scrollable Row of 1-Tap Quick-Filter Chips */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+            <button
+              type="button"
+              onClick={() => {
+                setFilterInstrument("");
+                setFilterHighPractice(false);
+                setFilterHasReference(false);
+                setSortBy("priority");
+                setSortDir("desc");
+              }}
+              className={`type-kicker shrink-0 border px-2.5 py-1 text-[10px] cursor-pointer ${
+                !filterInstrument &&
+                !filterHighPractice &&
+                !filterHasReference &&
+                sortBy === "priority"
+                  ? "border-[var(--ink-primary)] bg-[var(--ink-primary)] font-bold text-[var(--bg-surface)]"
+                  : "border-[var(--rule-border)] bg-[var(--bg-paper)] text-[var(--ink-secondary)]"
+              }`}
+            >
+              Alle ({pieces.length})
+            </button>
+
+            {currentUser?.instrument && (
+              <button
+                type="button"
+                onClick={() => {
+                  const target = currentUser.instrument!;
+                  setFilterInstrument((prev) =>
+                    prev === target ? "" : target
+                  );
+                }}
+                className={`type-kicker shrink-0 border px-2.5 py-1 text-[10px] cursor-pointer ${
+                  filterInstrument === currentUser.instrument
+                    ? "border-[var(--accent)] bg-[var(--accent)] font-bold text-[var(--accent-ink)]"
+                    : "border-[var(--ink-primary)] bg-[var(--bg-paper)] text-[var(--ink-primary)]"
+                }`}
+              >
+                🎺 Probebedarf: {currentUser.instrument}
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setFilterHighPractice((v) => !v)}
+              className={`type-kicker shrink-0 border px-2.5 py-1 text-[10px] cursor-pointer ${
+                filterHighPractice
+                  ? "border-[var(--accent)] bg-[var(--accent)] font-bold text-[var(--accent-ink)]"
+                  : "border-[var(--rule-border)] bg-[var(--bg-paper)] text-[var(--ink-primary)]"
+              }`}
+            >
+              🔥 Hoher Übungsbedarf
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setSortBy("folderNumber");
+                setSortDir("asc");
+              }}
+              className={`type-kicker shrink-0 border px-2.5 py-1 text-[10px] cursor-pointer ${
+                sortBy === "folderNumber"
+                  ? "border-[var(--ink-primary)] bg-[var(--ink-primary)] font-bold text-[var(--bg-surface)]"
+                  : "border-[var(--rule-border)] bg-[var(--bg-paper)] text-[var(--ink-primary)]"
+              }`}
+            >
+              📁 Mappen-Nr. ↑
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setFilterHasReference((v) => !v)}
+              className={`type-kicker shrink-0 border px-2.5 py-1 text-[10px] cursor-pointer ${
+                filterHasReference
+                  ? "border-[var(--ink-primary)] bg-[var(--ink-primary)] font-bold text-[var(--bg-surface)]"
+                  : "border-[var(--rule-border)] bg-[var(--bg-paper)] text-[var(--ink-primary)]"
+              }`}
+            >
+              🎧 Mit Referenz-Audio
+            </button>
           </div>
 
           <button
             type="button"
             onClick={() => setShowMobileFilters((v) => !v)}
-            className={`type-kicker inline-flex shrink-0 items-center gap-1 border px-2.5 py-1.5 text-[10px] cursor-pointer ${
+            className={`type-kicker flex w-full items-center justify-between border px-3 py-1.5 text-[10px] cursor-pointer ${
               showMobileFilters
                 ? "border-[var(--ink-primary)] bg-[var(--ink-primary)] text-[var(--bg-surface)]"
                 : "border-[var(--rule-border)] bg-[var(--bg-recessed)] text-[var(--ink-primary)]"
             }`}
           >
-            FILTER
+            <span>
+              ⚙ FILTER & SORTIERUNG ({activeFilterCount} aktiv)
+            </span>
             {showMobileFilters ? (
-              <ChevronUp className="h-3 w-3" />
+              <ChevronUp className="h-3.5 w-3.5" />
             ) : (
-              <ChevronDown className="h-3 w-3" />
+              <ChevronDown className="h-3.5 w-3.5" />
             )}
-          </button>
-
-          {onOpenOnboarding && pieces.length > 0 && (
-            <>
-              <button
-                type="button"
-                onClick={onOpenOnboarding}
-                title="Bewertungs-Onboarding"
-                className="type-kicker shrink-0 border border-[var(--ink-primary)] bg-[var(--bg-paper)] px-2 py-1.5 text-[10px] font-bold text-[var(--ink-primary)] cursor-pointer"
-              >
-                ★{" "}
-                {currentUser
-                  ? pieces.filter((p) => !p.myVote).length
-                  : pieces.length}
-              </button>
-              <button
-                type="button"
-                onClick={handleShareOnboardingLink}
-                title="Direktlink zur Repertoire-Abstimmung kopieren"
-                className={`type-kicker inline-flex shrink-0 items-center gap-1 border px-2 py-1.5 text-[10px] cursor-pointer ${
-                  copiedShareKey === "__ONBOARDING__"
-                    ? "border-[var(--ink-primary)] bg-[var(--ink-primary)] font-bold text-[var(--bg-surface)]"
-                    : "border-[var(--rule-border)] bg-[var(--bg-paper)] text-[var(--ink-primary)]"
-                }`}
-              >
-                {copiedShareKey === "__ONBOARDING__" ? (
-                  <Check className="h-3 w-3" />
-                ) : (
-                  <Share2 className="h-3 w-3" />
-                )}
-              </button>
-            </>
-          )}
-
-          <button
-            type="button"
-            onClick={openCreateModal}
-            className="type-kicker inline-flex shrink-0 items-center gap-1 bg-[var(--accent)] px-2.5 py-1.5 text-[10px] text-[var(--accent-ink)] cursor-pointer"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            NEU
           </button>
         </div>
 
@@ -475,7 +828,7 @@ export default function RepertoireTab({
         <div
           className={`${
             showMobileFilters ? "block" : "hidden"
-          } lg:block sticky top-36 space-y-5 border-t-2 border-[var(--rule-heavy)] bg-[var(--bg-surface)] p-4 sm:p-5 border-x border-b border-x-[var(--rule-border)] border-b-[var(--rule-border)]`}
+          } md:block sticky top-36 space-y-5 border-t-2 border-[var(--rule-heavy)] bg-[var(--bg-surface)] p-4 sm:p-5 border-x border-b border-x-[var(--rule-border)] border-b-[var(--rule-border)]`}
         >
           <div className="flex items-baseline justify-between border-b border-[var(--rule-border)] pb-3">
             <div>
@@ -491,7 +844,7 @@ export default function RepertoireTab({
             </span>
           </div>
 
-          <div className="hidden space-y-2 lg:block">
+          <div className="hidden space-y-2 md:block">
             <button
               type="button"
               onClick={openCreateModal}
@@ -541,7 +894,7 @@ export default function RepertoireTab({
           </div>
 
           {/* Search (Desktop) */}
-          <div className="hidden lg:block">
+          <div className="hidden md:block">
             <label className="type-kicker mb-1.5 block text-[var(--ink-secondary)]">
               Volltextsuche
             </label>
@@ -615,6 +968,33 @@ export default function RepertoireTab({
 
           {/* Filter Dropdowns */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1">
+            <div>
+              <label className="type-kicker mb-1 block text-[var(--accent)]">
+                🎺 Probebedarf nach Instrument / Register
+              </label>
+              <select
+                value={filterInstrument}
+                onChange={(e) => setFilterInstrument(e.target.value)}
+                className="w-full border border-[var(--ink-primary)] bg-[var(--bg-paper)] px-3 py-2 text-sm font-medium text-[var(--ink-primary)] focus:outline-none"
+              >
+                <option value="">Alle Instrumente & Register</option>
+                <optgroup label="Register-Familien">
+                  {BIGBAND_REGISTER_FAMILIES.map((reg) => (
+                    <option key={`reg-${reg}`} value={reg}>
+                      Register: {reg}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="Einzelne Instrumente">
+                  {BIGBAND_INSTRUMENTS.map((inst) => (
+                    <option key={`inst-${inst}`} value={inst}>
+                      {inst}
+                    </option>
+                  ))}
+                </optgroup>
+              </select>
+            </div>
+
             <div>
               <label className="type-kicker mb-1 block text-[var(--ink-secondary)]">
                 Sänger
@@ -694,6 +1074,9 @@ export default function RepertoireTab({
               setFilterSoloist("");
               setFilterSongType("");
               setFilterDifficulty("");
+              setFilterInstrument("");
+              setFilterHighPractice(false);
+              setFilterHasReference(false);
             }}
             className="type-kicker w-full border border-[var(--rule-border)] bg-[var(--bg-recessed)] py-2 text-center text-[var(--ink-secondary)] hover:border-[var(--ink-primary)] hover:text-[var(--ink-primary)] cursor-pointer"
           >
@@ -704,6 +1087,91 @@ export default function RepertoireTab({
 
       {/* Right Main Ledger: Columns 5–12 */}
       <section className="lg:col-span-8">
+        {/* Desktop Quick-Filter Chips Row */}
+        <div className="mb-3 hidden flex-wrap items-center gap-1.5 border border-[var(--rule-border)] bg-[var(--bg-surface)] px-3 py-2 md:flex">
+          <span className="type-kicker mr-1 text-[10px] text-[var(--ink-muted)]">
+            SCHNELLFILTER:
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              setFilterInstrument("");
+              setFilterHighPractice(false);
+              setFilterHasReference(false);
+              setSortBy("priority");
+              setSortDir("desc");
+            }}
+            className={`type-kicker border px-2.5 py-1 text-[10px] cursor-pointer ${
+              !filterInstrument &&
+              !filterHighPractice &&
+              !filterHasReference &&
+              sortBy === "priority"
+                ? "border-[var(--ink-primary)] bg-[var(--ink-primary)] font-bold text-[var(--bg-surface)]"
+                : "border-[var(--rule-border)] bg-[var(--bg-paper)] text-[var(--ink-secondary)]"
+            }`}
+          >
+            Alle ({pieces.length})
+          </button>
+
+          {currentUser?.instrument && (
+            <button
+              type="button"
+              onClick={() => {
+                const target = currentUser.instrument!;
+                setFilterInstrument((prev) =>
+                  prev === target ? "" : target
+                );
+              }}
+              className={`type-kicker border px-2.5 py-1 text-[10px] cursor-pointer ${
+                filterInstrument === currentUser.instrument
+                  ? "border-[var(--accent)] bg-[var(--accent)] font-bold text-[var(--accent-ink)]"
+                  : "border-[var(--ink-primary)] bg-[var(--bg-paper)] text-[var(--ink-primary)]"
+              }`}
+            >
+              🎺 Probebedarf: {currentUser.instrument}
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setFilterHighPractice((v) => !v)}
+            className={`type-kicker border px-2.5 py-1 text-[10px] cursor-pointer ${
+              filterHighPractice
+                ? "border-[var(--accent)] bg-[var(--accent)] font-bold text-[var(--accent-ink)]"
+                : "border-[var(--rule-border)] bg-[var(--bg-paper)] text-[var(--ink-primary)]"
+            }`}
+          >
+            🔥 Hoher Übungsbedarf
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setSortBy("folderNumber");
+              setSortDir("asc");
+            }}
+            className={`type-kicker border px-2.5 py-1 text-[10px] cursor-pointer ${
+              sortBy === "folderNumber"
+                ? "border-[var(--ink-primary)] bg-[var(--ink-primary)] font-bold text-[var(--bg-surface)]"
+                : "border-[var(--rule-border)] bg-[var(--bg-paper)] text-[var(--ink-primary)]"
+            }`}
+          >
+            📁 Mappen-Nr. ↑
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFilterHasReference((v) => !v)}
+            className={`type-kicker border px-2.5 py-1 text-[10px] cursor-pointer ${
+              filterHasReference
+                ? "border-[var(--ink-primary)] bg-[var(--ink-primary)] font-bold text-[var(--bg-surface)]"
+                : "border-[var(--rule-border)] bg-[var(--bg-paper)] text-[var(--ink-primary)]"
+            }`}
+          >
+            🎧 Mit Referenz-Audio
+          </button>
+        </div>
+
         {filteredAndSortedPieces.length === 0 ? (
           <div className="border-t-2 border-[var(--rule-heavy)] bg-[var(--bg-surface)] p-12 text-center border-x border-b border-x-[var(--rule-border)] border-b-[var(--rule-border)]">
             <div className="type-kicker text-[var(--ink-muted)]">
@@ -779,6 +1247,11 @@ export default function RepertoireTab({
                               #{piece.folderNumber}
                             </span>
                           )}
+                          {piece.bpm > 0 && (
+                            <span className="font-mono-tabular border border-[var(--ink-primary)] bg-[var(--bg-recessed)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--ink-primary)]">
+                              ♩ {piece.bpm} BPM
+                            </span>
+                          )}
                           <span className="font-semibold text-[var(--ink-primary)]">
                             {piece.singers || "Instr."}
                           </span>
@@ -796,6 +1269,11 @@ export default function RepertoireTab({
                           {piece.folderNumber && (
                             <span className="type-kicker border border-[var(--ink-primary)] bg-[var(--ink-primary)] px-2 py-0.5 text-[var(--bg-surface)]">
                               MAPPE NR. {piece.folderNumber}
+                            </span>
+                          )}
+                          {piece.bpm > 0 && (
+                            <span className="font-mono-tabular border border-[var(--ink-primary)] bg-[var(--bg-recessed)] px-2 py-0.5 text-xs font-bold text-[var(--ink-primary)]">
+                              ♩ {piece.bpm} BPM
                             </span>
                           )}
                           <span className="type-kicker border border-[var(--ink-primary)] bg-[var(--bg-recessed)] px-2 py-0.5 text-[var(--ink-primary)]">
@@ -927,6 +1405,327 @@ export default function RepertoireTab({
                     </div>
                   )}
 
+                  {/* Instrument Practice Need Badges + Reference Audio + Measure Notes Bar */}
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-[var(--rule-border)] pt-2.5">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="type-kicker text-[10px] text-[var(--ink-muted)]">
+                        REGISTER-BEDARF:
+                      </span>
+                      {piece.instrumentStats.map((st) => {
+                        const isFilteredMatch =
+                          Boolean(filterInstrument) &&
+                          (st.instrument.toLowerCase() ===
+                            filterInstrument.toLowerCase() ||
+                            st.registerFamily.toLowerCase() ===
+                              filterInstrument.toLowerCase() ||
+                            st.registerFamily.toLowerCase() ===
+                              getRegisterFamily(filterInstrument).toLowerCase());
+                        const isHighNeed =
+                          st.avgPracticeNeeded >= 3.5 || st.isFlaggedFocus;
+
+                        return (
+                          <button
+                            key={st.instrument}
+                            type="button"
+                            onClick={() =>
+                              setFilterInstrument((prev) =>
+                                prev === st.instrument ? "" : st.instrument
+                              )
+                            }
+                            title={`Nach ${st.instrument} filtern`}
+                            className={`font-mono-tabular inline-flex items-center gap-1 border px-2 py-0.5 text-[10px] cursor-pointer ${
+                              isFilteredMatch
+                                ? "border-2 border-[var(--accent)] bg-[var(--accent)] font-bold text-[var(--accent-ink)]"
+                                : isHighNeed
+                                ? "border-[var(--accent)] bg-[var(--bg-paper)] font-semibold text-[var(--accent)]"
+                                : "border-[var(--rule-border)] bg-[var(--bg-paper)] text-[var(--ink-secondary)]"
+                            }`}
+                          >
+                            <span>🎺 {st.instrument}:</span>
+                            {st.voteCount > 0 ? (
+                              <span>
+                                Ø {st.avgPracticeNeeded.toFixed(1)} (
+                                {st.voteCount})
+                              </span>
+                            ) : (
+                              <span>Fokus</span>
+                            )}
+                          </button>
+                        );
+                      })}
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFocusEditorPieceId(
+                            focusEditorPieceId === piece.id ? null : piece.id
+                          )
+                        }
+                        className="type-kicker border border-dashed border-[var(--rule-border)] bg-[var(--bg-paper)] px-2 py-0.5 text-[10px] text-[var(--ink-secondary)] hover:border-[var(--ink-primary)] hover:text-[var(--ink-primary)] cursor-pointer"
+                      >
+                        + Instrumenten-Fokus
+                      </button>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {piece.referenceUrl && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setExpandedReferencePieceId(
+                                expandedReferencePieceId === piece.id
+                                  ? null
+                                  : piece.id
+                              )
+                            }
+                            className={`type-kicker inline-flex items-center gap-1 border px-2.5 py-1 text-[10px] cursor-pointer ${
+                              expandedReferencePieceId === piece.id
+                                ? "border-[var(--ink-primary)] bg-[var(--ink-primary)] font-bold text-[var(--bg-surface)]"
+                                : "border-[var(--ink-primary)] bg-[var(--bg-recessed)] font-semibold text-[var(--ink-primary)]"
+                            }`}
+                          >
+                            <Play className="h-3 w-3" />
+                            <span>▶ REFERENZ-AUFNAHME</span>
+                          </button>
+                          <a
+                            href={piece.referenceUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="Referenz-Link in neuem Tab öffnen"
+                            className="type-kicker inline-flex items-center border border-[var(--rule-border)] bg-[var(--bg-paper)] p-1 text-[var(--ink-secondary)] hover:border-[var(--ink-primary)]"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        </>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedNotesPieceId(
+                            expandedNotesPieceId === piece.id ? null : piece.id
+                          )
+                        }
+                        className={`type-kicker inline-flex items-center gap-1 border px-2.5 py-1 text-[10px] cursor-pointer ${
+                          expandedNotesPieceId === piece.id ||
+                          piece.measureNotes.length > 0
+                            ? "border-[var(--ink-primary)] bg-[var(--bg-paper)] font-semibold text-[var(--ink-primary)]"
+                            : "border-[var(--rule-border)] bg-[var(--bg-paper)] text-[var(--ink-secondary)]"
+                        }`}
+                      >
+                        <span>
+                          📌 TAKT-NOTIZEN & STELLEN ({piece.measureNotes.length})
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Quick Inline Instrument Focus Toggle Popover */}
+                  {focusEditorPieceId === piece.id && (
+                    <div className="mt-2.5 border border-[var(--ink-primary)] bg-[var(--bg-recessed)] p-3">
+                      <div className="mb-2 flex items-center justify-between">
+                        <span className="type-kicker text-[10px] text-[var(--ink-primary)]">
+                          REGISTER / INSTRUMENTE MIT BESONDEREM PROBEBEDARF MARKIEREN:
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setFocusEditorPieceId(null)}
+                          className="type-kicker text-[10px] text-[var(--ink-secondary)] underline cursor-pointer"
+                        >
+                          FERTIG
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {[
+                          ...BIGBAND_REGISTER_FAMILIES,
+                          ...BIGBAND_INSTRUMENTS.filter(
+                            (i) =>
+                              !(
+                                BIGBAND_REGISTER_FAMILIES as readonly string[]
+                              ).includes(i)
+                          ),
+                        ].map((inst) => {
+                          const active = piece.focusInstrumentList.some(
+                            (fi) => fi.toLowerCase() === inst.toLowerCase()
+                          );
+                          return (
+                            <button
+                              key={inst}
+                              type="button"
+                              onClick={() =>
+                                handleToggleFocusInstrument(piece, inst)
+                              }
+                              className={`type-kicker border px-2 py-1 text-[10px] cursor-pointer ${
+                                active
+                                  ? "border-[var(--accent)] bg-[var(--accent)] font-bold text-[var(--accent-ink)]"
+                                  : "border-[var(--rule-border)] bg-[var(--bg-surface)] text-[var(--ink-primary)]"
+                              }`}
+                            >
+                              {active ? "✓ " : "+ "}
+                              {inst}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Inline Reference Audio / Video Player */}
+                  {expandedReferencePieceId === piece.id &&
+                    piece.referenceUrl && (
+                      <div className="mt-2.5 border border-[var(--ink-primary)] bg-[var(--bg-recessed)] p-3">
+                        <div className="mb-2 flex items-center justify-between">
+                          <span className="type-kicker text-[10px] text-[var(--ink-primary)]">
+                            REFERENZ-AUFNAHME: {piece.title}
+                          </span>
+                          <a
+                            href={piece.referenceUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="type-kicker inline-flex items-center gap-1 text-[10px] text-[var(--accent)] underline"
+                          >
+                            DIREKTLINK ÖFFNEN <ExternalLink className="h-3 w-3" />
+                          </a>
+                        </div>
+                        {buildInlineEmbedUrl(piece.referenceUrl) ? (
+                          <div className="overflow-hidden border border-[var(--rule-heavy)] bg-black">
+                            <iframe
+                              src={buildInlineEmbedUrl(piece.referenceUrl)!}
+                              title={`Referenz ${piece.title}`}
+                              width="100%"
+                              height={
+                                piece.referenceUrl.includes("spotify")
+                                  ? "152"
+                                  : "240"
+                              }
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                              allowFullScreen
+                              className="border-0"
+                            />
+                          </div>
+                        ) : (
+                          <p className="text-xs text-[var(--ink-secondary)]">
+                            Externer Link:{" "}
+                            <a
+                              href={piece.referenceUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="underline"
+                            >
+                              {piece.referenceUrl}
+                            </a>
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                  {/* Expandable Section: Measure Notes & Stellen (Takt-Notizen) */}
+                  {expandedNotesPieceId === piece.id && (
+                    <div className="mt-2.5 border border-[var(--ink-primary)] bg-[var(--bg-paper)] p-3">
+                      <div className="type-kicker mb-2 text-[var(--ink-primary)]">
+                        📌 TAKT-NOTIZEN & SCHWIERIGE STELLEN ({piece.title})
+                      </div>
+                      {piece.measureNotes.length === 0 ? (
+                        <p className="mb-2 text-xs text-[var(--ink-muted)]">
+                          Noch keine Takt-Notizen hinterlegt (z. B. „Takt 48–64 ·
+                          Posaune: Kurz absetzen auf 2+“).
+                        </p>
+                      ) : (
+                        <div className="mb-3 divide-y divide-[var(--rule-border)] border border-[var(--rule-border)] bg-[var(--bg-surface)]">
+                          {piece.measureNotes.map((mn) => (
+                            <div
+                              key={mn.id}
+                              className="flex items-center justify-between gap-2 px-3 py-2 text-xs"
+                            >
+                              <div>
+                                <span className="font-mono-tabular font-bold text-[var(--ink-primary)]">
+                                  {mn.measure}
+                                </span>
+                                {mn.instrument && (
+                                  <span className="type-kicker mx-1.5 border border-[var(--ink-primary)] bg-[var(--bg-recessed)] px-1.5 py-0.5 text-[10px] text-[var(--ink-primary)]">
+                                    {mn.instrument}
+                                  </span>
+                                )}
+                                <span className="text-[var(--ink-primary)]">
+                                  {mn.note}
+                                </span>
+                                {mn.author && (
+                                  <span className="ml-2 text-[10px] text-[var(--ink-muted)]">
+                                    ({mn.author})
+                                  </span>
+                                )}
+                              </div>
+                              <button
+                                type="button"
+                                disabled={savingMeasureNoteId === piece.id}
+                                onClick={() =>
+                                  handleRemoveMeasureNote(piece, mn.id)
+                                }
+                                title="Takt-Notiz entfernen"
+                                className="text-[var(--ink-muted)] hover:text-[var(--accent)] cursor-pointer"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          handleAddMeasureNote(piece);
+                        }}
+                        className="grid grid-cols-1 gap-2 sm:grid-cols-12"
+                      >
+                        <input
+                          type="text"
+                          value={measureInput}
+                          onChange={(e) => setMeasureInput(e.target.value)}
+                          placeholder="Takt / Stelle (z.B. Takt 48–64)"
+                          className="border border-[var(--rule-border)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-xs text-[var(--ink-primary)] sm:col-span-3"
+                        />
+                        <select
+                          value={measureInstrumentInput}
+                          onChange={(e) =>
+                            setMeasureInstrumentInput(e.target.value)
+                          }
+                          className="border border-[var(--rule-border)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-xs text-[var(--ink-primary)] sm:col-span-3"
+                        >
+                          <option value="Tutti">Tutti (Alle)</option>
+                          {BIGBAND_REGISTER_FAMILIES.map((reg) => (
+                            <option key={`mreg-${reg}`} value={reg}>
+                              Register: {reg}
+                            </option>
+                          ))}
+                          {BIGBAND_INSTRUMENTS.map((inst) => (
+                            <option key={`minst-${inst}`} value={inst}>
+                              {inst}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          type="text"
+                          value={measureNoteText}
+                          onChange={(e) => setMeasureNoteText(e.target.value)}
+                          placeholder="Hinweis (z.B. Kurz absetzen auf 2+, Phrasierung)..."
+                          className="border border-[var(--rule-border)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-xs text-[var(--ink-primary)] sm:col-span-4"
+                        />
+                        <button
+                          type="submit"
+                          disabled={
+                            savingMeasureNoteId === piece.id ||
+                            !measureNoteText.trim()
+                          }
+                          className="type-kicker bg-[var(--ink-primary)] px-3 py-1.5 text-[10px] font-bold text-[var(--bg-surface)] disabled:opacity-40 sm:col-span-2 cursor-pointer"
+                        >
+                          + STELLE
+                        </button>
+                      </form>
+                    </div>
+                  )}
+
                   {/* Ensemble Averages vs Personal 1–5 Voting (Collapsible on Mobile, Visible on Desktop) */}
                   <div
                     className={`${
@@ -1046,6 +1845,11 @@ export default function RepertoireTab({
                             >
                               <span className="font-semibold text-[var(--ink-primary)]">
                                 {v.userName}
+                                {v.userInstrument && (
+                                  <span className="type-kicker ml-1.5 border border-[var(--rule-border)] bg-[var(--bg-surface)] px-1.5 py-0.5 text-[10px] text-[var(--ink-secondary)]">
+                                    🎺 {v.userInstrument}
+                                  </span>
+                                )}
                               </span>
                               <div className="font-mono-tabular flex items-center gap-4 text-[var(--ink-secondary)]">
                                 <span>Gefällt: {v.likeScore}/5</span>
@@ -1119,8 +1923,8 @@ export default function RepertoireTab({
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-12">
+                <div className="sm:col-span-4">
                   <label className="type-kicker mb-1.5 block text-[var(--ink-secondary)]">
                     Schwierigkeit
                   </label>
@@ -1139,14 +1943,31 @@ export default function RepertoireTab({
                   </select>
                 </div>
 
-                <TagInput
-                  label="Song-Typ / Stil"
-                  placeholder="z.B. Soul, Funk, Ballade, Opener..."
-                  value={songType}
-                  onChange={setSongType}
-                  suggestions={suggestions.songTypes}
-                  singleValue
-                />
+                <div className="sm:col-span-3">
+                  <label className="type-kicker mb-1.5 block text-[var(--ink-secondary)]">
+                    Ziel-Tempo (BPM)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={400}
+                    value={bpmInput}
+                    onChange={(e) => setBpmInput(e.target.value)}
+                    placeholder="z.B. 160"
+                    className="font-mono-tabular w-full border border-[var(--rule-border)] bg-[var(--bg-paper)] px-3 py-2 text-sm text-[var(--ink-primary)] focus:border-[var(--ink-primary)] focus:outline-none"
+                  />
+                </div>
+
+                <div className="sm:col-span-5">
+                  <TagInput
+                    label="Song-Typ / Stil"
+                    placeholder="z.B. Soul, Funk, Swing..."
+                    value={songType}
+                    onChange={setSongType}
+                    suggestions={suggestions.songTypes}
+                    singleValue
+                  />
+                </div>
               </div>
 
               <TagInput
@@ -1164,6 +1985,33 @@ export default function RepertoireTab({
                 onChange={setSoloists}
                 suggestions={suggestions.soloists}
               />
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="type-kicker mb-1.5 block text-[var(--ink-secondary)]">
+                    Referenz-Aufnahme (YouTube / Spotify Link)
+                  </label>
+                  <input
+                    type="url"
+                    value={referenceUrlInput}
+                    onChange={(e) => setReferenceUrlInput(e.target.value)}
+                    placeholder="https://www.youtube.com/watch?v=..."
+                    className="w-full border border-[var(--rule-border)] bg-[var(--bg-paper)] px-3 py-2 text-sm text-[var(--ink-primary)] focus:border-[var(--ink-primary)] focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="type-kicker mb-1.5 block text-[var(--ink-secondary)]">
+                    Instrumenten-Fokus (Register mit Probebedarf)
+                  </label>
+                  <input
+                    type="text"
+                    value={focusInstrumentsInput}
+                    onChange={(e) => setFocusInstrumentsInput(e.target.value)}
+                    placeholder="z.B. Posaune, Saxophon"
+                    className="w-full border border-[var(--rule-border)] bg-[var(--bg-paper)] px-3 py-2 text-sm text-[var(--ink-primary)] focus:border-[var(--ink-primary)] focus:outline-none"
+                  />
+                </div>
+              </div>
 
               <div>
                 <label className="type-kicker mb-1.5 block text-[var(--ink-secondary)]">

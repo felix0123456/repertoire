@@ -11,6 +11,7 @@ datasource db {
 model User {
   id            String             @id @default(cuid())
   name          String             @unique
+  instrument    String             @default("") // z.B. "Posaune", "Trompete", "Altsaxophon", "Tenorsaxophon", "Baritonsaxophon", "Klarinette / Holz", "Klavier / Keys", "Gitarre", "Bass", "Schlagzeug", "Gesang", "Dirigent / Leitung"
   createdAt     DateTime           @default(now())
   votes         PieceVote[]
   logs          RehearsalLog[]
@@ -18,22 +19,26 @@ model User {
 }
 
 model Piece {
-  id              String                  @id @default(cuid())
-  title           String
-  folderNumber    String                  @default("") // Nummer in der Mappe
-  artist          String                  @default("")
-  singers         String                  @default("") // Comma-separated singer names
-  soloists        String                  @default("") // Comma-separated soloist names
-  songType        String                  @default("") // Song-Typ / Genre / Stil
-  difficulty      String                  @default("MEDIUM") // EASY | MEDIUM | HARD
-  notes           String                  @default("")
-  lastPracticedAt DateTime?
-  createdBy       String                  @default("")
-  createdAt       DateTime                @default(now())
-  updatedAt       DateTime                @updatedAt
-  votes           PieceVote[]
-  sessionPieces   RehearsalSessionPiece[]
-  logs            RehearsalLog[]
+  id               String                  @id @default(cuid())
+  title            String
+  folderNumber     String                  @default("") // Nummer in der Mappe
+  artist           String                  @default("")
+  singers          String                  @default("") // Comma-separated singer names
+  soloists         String                  @default("") // Comma-separated soloist names
+  songType         String                  @default("") // Song-Typ / Genre / Stil
+  difficulty       String                  @default("MEDIUM") // EASY | MEDIUM | HARD
+  bpm              Int                     @default(0) // Ziel-Tempo in BPM (0 = nicht hinterlegt)
+  notes            String                  @default("")
+  referenceUrl     String                  @default("") // YouTube/Spotify Referenz-Link des Arrangements
+  focusInstruments String                  @default("") // Komma-separierte Instrumente mit besonderem Probebedarf (z.B. "Posaune, Saxophon")
+  measureNotesJson String                  @default("[]") // JSON-Array: [{ id, measure, instrument, note, author, createdAt }]
+  lastPracticedAt  DateTime?
+  createdBy        String                  @default("")
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+  votes            PieceVote[]
+  sessionPieces    RehearsalSessionPiece[]
+  logs             RehearsalLog[]
 }
 
 model PieceVote {
@@ -41,7 +46,7 @@ model PieceVote {
   userId              String
   pieceId             String
   likeScore           Int      @default(3) // 1..5 Beliebtheit
-  confidenceScore     Int      @default(3) // 1..5 Sicherheit
+  confidenceScore     Int      @default(3) // 1..5 Schwierigkeit
   practiceNeededScore Int      @default(3) // 1..5 Übungsbedarf
   updatedAt           DateTime @updatedAt
 
@@ -60,40 +65,51 @@ model RehearsalConfig {
 }
 
 model ConcertEvent {
-  id             String    @id @default(cuid())
-  title          String
-  scheduledDate  DateTime?
-  location       String    @default("")
-  additionalInfo String    @default("")
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id               String    @id @default(cuid())
+  title            String
+  scheduledDate    DateTime?
+  location         String    @default("")
+  additionalInfo   String    @default("")
+  setlistJson      String    @default("[]") // JSON-Array von Sets/Blöcken inkl. Stücken & Talk-Moderationen
+  konzertmeisterId String    @default("")   // Konzertmeister-Termin-ID zur Dubletten-freien Synchronisation
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 }
 
 model RehearsalSession {
-  id             String                  @id @default(cuid())
-  sessionNumber  Int
-  title          String
-  status         String                  @default("PLANNED") // PLANNED | ACTIVE | COMPLETED
-  scheduledDate  DateTime?
-  location       String                  @default("")
-  additionalInfo String                  @default("")
-  presentSingers String                  @default("") // Comma-separated present singers (empty = all)
-  absentSoloists String                  @default("") // Comma-separated absent soloists
-  isLocked       Boolean                 @default(false) // Prevents automatic overwrite of manual order/selection
-  completedAt    DateTime?
-  createdAt      DateTime                @default(now())
-  updatedAt      DateTime                @updatedAt
-  pieces         RehearsalSessionPiece[]
-  logs           RehearsalLog[]
+  id                   String                  @id @default(cuid())
+  sessionNumber        Int
+  title                String
+  status               String                  @default("PLANNED") // PLANNED | ACTIVE | COMPLETED
+  scheduledDate        DateTime?
+  location             String                  @default("")
+  additionalInfo       String                  @default("")
+  presentSingers       String                  @default("") // Comma-separated present singers (empty = all)
+  absentSoloists       String                  @default("") // Comma-separated absent soloists
+  absentInstruments    String                  @default("") // Komma-separierte abwesende/unterbesetzte Register (z.B. "Saxophon, Posaune")
+  isLocked             Boolean                 @default(false) // Prevents automatic overwrite of manual order/selection
+  hasBreak             Boolean                 @default(false) // Optionale Pause in der Session
+  breakDurationMinutes Int                     @default(15)    // Dauer der Pause in Minuten
+  breakAfterPieceIndex Int                     @default(3)     // Position der Pause (nach dem N-ten Stück, 1-basiert)
+  attendanceJson       String                  @default("[]")  // JSON-Array aus Konzertmeister: [{ userId, userName, instrument, status: "PRESENT"|"ABSENT"|"MAYBE", comment, updatedAt }]
+  konzertmeisterId     String                  @default("")    // Konzertmeister-Termin-ID
+  completedAt          DateTime?
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+  pieces               RehearsalSessionPiece[]
+  logs                 RehearsalLog[]
 }
 
 model RehearsalSessionPiece {
-  id               String           @id @default(cuid())
-  sessionId        String
-  pieceId          String
-  sortOrder        Int              @default(0)
-  isManualOverride Boolean          @default(false)
-  createdAt        DateTime         @default(now())
+  id                String           @id @default(cuid())
+  sessionId         String
+  pieceId           String
+  sortOrder         Int              @default(0)
+  isManualOverride  Boolean          @default(false)
+  estimatedMinutes  Int              @default(0)  // 0 = automatisch aus Übungsbedarf/Schwierigkeit (10-25 Min.), >0 = manuelle Überschreibung
+  sessionBpm        Int              @default(0)  // Optionales Proben-Tempo in dieser Session (z.B. 160)
+  sessionBpmComment String           @default("") // Optionaler Tempo-Kommentar für diese Session (z.B. "160 BPM, nächstes Mal schneller")
+  createdAt         DateTime         @default(now())
 
   session RehearsalSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   piece   Piece            @relation(fields: [pieceId], references: [id], onDelete: Cascade)
@@ -150,4 +166,3 @@ model SongProposalVote {
 
   @@unique([userId, proposalId])
 }
-

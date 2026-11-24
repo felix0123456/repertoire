@@ -76,6 +76,7 @@ export async function POST(req: NextRequest) {
             data: {
               id: u.id,
               name: u.name,
+              instrument: u.instrument || "",
               createdAt: u.createdAt ? new Date(u.createdAt) : new Date(),
             },
           });
@@ -94,7 +95,11 @@ export async function POST(req: NextRequest) {
               soloists: p.soloists || "",
               songType: p.songType || "",
               difficulty: p.difficulty || "MEDIUM",
+              bpm: Number(p.bpm ?? 0) || 0,
               notes: p.notes || "",
+              referenceUrl: p.referenceUrl || "",
+              focusInstruments: p.focusInstruments || "",
+              measureNotesJson: p.measureNotesJson || "[]",
               lastPracticedAt: p.lastPracticedAt
                 ? new Date(p.lastPracticedAt)
                 : null,
@@ -129,6 +134,8 @@ export async function POST(req: NextRequest) {
               scheduledDate: c.scheduledDate ? new Date(c.scheduledDate) : null,
               location: c.location || "",
               additionalInfo: c.additionalInfo || "",
+              setlistJson: c.setlistJson || "[]",
+              konzertmeisterId: c.konzertmeisterId || "",
             },
           });
         }
@@ -147,7 +154,13 @@ export async function POST(req: NextRequest) {
               additionalInfo: s.additionalInfo || "",
               presentSingers: s.presentSingers || "",
               absentSoloists: s.absentSoloists || "",
+              absentInstruments: s.absentInstruments || "",
               isLocked: Boolean(s.isLocked),
+              hasBreak: Boolean(s.hasBreak),
+              breakDurationMinutes: Number(s.breakDurationMinutes ?? 15) || 15,
+              breakAfterPieceIndex: Number(s.breakAfterPieceIndex ?? 3) || 3,
+              attendanceJson: s.attendanceJson || "[]",
+              konzertmeisterId: s.konzertmeisterId || "",
               completedAt: s.completedAt ? new Date(s.completedAt) : null,
             },
           });
@@ -163,6 +176,9 @@ export async function POST(req: NextRequest) {
               pieceId: sp.pieceId,
               sortOrder: sp.sortOrder ?? 1,
               isManualOverride: Boolean(sp.isManualOverride),
+              estimatedMinutes: Number(sp.estimatedMinutes ?? 0) || 0,
+              sessionBpm: Number(sp.sessionBpm ?? 0) || 0,
+              sessionBpmComment: sp.sessionBpmComment || "",
             },
           });
         }
@@ -236,4 +252,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-

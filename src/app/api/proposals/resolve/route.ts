@@ -677,22 +677,48 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Load existing proposals to flag duplicates
-    const existingProposals = await prisma.songProposal.findMany({
-      select: { platform: true, externalId: true, title: true, artist: true },
-    });
+    // Load existing proposals and repertoire pieces to flag duplicates
+    const [existingProposals, existingPieces] = await Promise.all([
+      prisma.songProposal.findMany({
+        select: { platform: true, externalId: true, title: true, artist: true },
+      }),
+      prisma.piece.findMany({
+        select: { title: true },
+      }),
+    ]);
     const existingKeys = new Set(
       existingProposals
         .filter((p) => p.externalId)
         .map((p) => `${p.platform}:${p.externalId}`)
     );
 
-    const markExists = (t: ResolvedTrackMetadata): ResolvedTrackMetadata => ({
-      ...t,
-      alreadyExists: Boolean(
-        t.externalId && existingKeys.has(`${t.platform}:${t.externalId}`)
-      ),
-    });
+    const normalizeSongTitle = (raw: string): string =>
+      (raw || "")
+        .toLowerCase()
+        .replace(/[\(\[][^\)\]]*[\)\]]/g, " ")
+        .replace(/[^a-z0-9äöüß]+/gi, " ")
+        .trim();
+
+    const existingProposalTitles = new Set(
+      existingProposals.map((p) => normalizeSongTitle(p.title)).filter(Boolean)
+    );
+    const existingPieceTitles = new Set(
+      existingPieces.map((p) => normalizeSongTitle(p.title)).filter(Boolean)
+    );
+
+    const markExists = (t: ResolvedTrackMetadata): ResolvedTrackMetadata => {
+      const normTitle = normalizeSongTitle(t.title);
+      const inRep = Boolean(normTitle && existingPieceTitles.has(normTitle));
+      const inProps = Boolean(
+        (t.externalId && existingKeys.has(`${t.platform}:${t.externalId}`)) ||
+          (normTitle && existingProposalTitles.has(normTitle))
+      );
+      return {
+        ...t,
+        alreadyExists: inProps || inRep,
+        alreadyInRepertoire: inRep,
+      };
+    };
 
     // 1. Handle spotify: URIs directly
     if (rawUrl.startsWith("spotify:")) {

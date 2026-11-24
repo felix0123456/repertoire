@@ -7,9 +7,11 @@ import {
 import {
   calculatePiecePriority,
   normalizeTags,
+  parseMeasureNotes,
   recalculateSchedule,
   splitTags,
 } from "@/lib/scheduler";
+import { BIGBAND_INSTRUMENTS } from "@/types";
 
 export async function GET(req: NextRequest) {
   try {
@@ -21,7 +23,7 @@ export async function GET(req: NextRequest) {
       include: {
         votes: {
           include: {
-            user: { select: { id: true, name: true } },
+            user: { select: { id: true, name: true, instrument: true } },
           },
         },
       },
@@ -31,13 +33,22 @@ export async function GET(req: NextRequest) {
     const singerSet = new Set<string>();
     const soloistSet = new Set<string>();
     const songTypeSet = new Set<string>();
+    const instrumentSet = new Set<string>(BIGBAND_INSTRUMENTS);
 
     const enriched = pieces.map((p) => {
       const singerList = splitTags(p.singers);
       const soloistList = splitTags(p.soloists);
+      const focusInstrumentList = splitTags(p.focusInstruments);
       singerList.forEach((s) => singerSet.add(s));
       soloistList.forEach((s) => soloistSet.add(s));
+      focusInstrumentList.forEach((inst) => instrumentSet.add(inst));
       if (p.songType.trim()) songTypeSet.add(p.songType.trim());
+
+      p.votes.forEach((v) => {
+        if (v.user?.instrument?.trim()) {
+          instrumentSet.add(v.user.instrument.trim());
+        }
+      });
 
       const stats = calculatePiecePriority(p);
       const myVote =
@@ -61,7 +72,13 @@ export async function GET(req: NextRequest) {
         soloistList,
         songType: p.songType,
         difficulty: p.difficulty,
+        bpm: p.bpm || 0,
         notes: p.notes,
+        referenceUrl: p.referenceUrl || "",
+        focusInstruments: p.focusInstruments || "",
+        focusInstrumentList,
+        measureNotes: parseMeasureNotes(p.measureNotesJson),
+        instrumentStats: stats.instrumentStats,
         lastPracticedAt: p.lastPracticedAt
           ? p.lastPracticedAt.toISOString()
           : null,
@@ -83,6 +100,7 @@ export async function GET(req: NextRequest) {
         votes: p.votes.map((v) => ({
           userId: v.userId,
           userName: v.user.name,
+          userInstrument: v.user.instrument || "",
           likeScore: v.likeScore,
           confidenceScore: v.confidenceScore,
           practiceNeededScore: v.practiceNeededScore,
@@ -100,6 +118,7 @@ export async function GET(req: NextRequest) {
         songTypes: Array.from(songTypeSet).sort((a, b) =>
           a.localeCompare(b, "de")
         ),
+        instruments: Array.from(instrumentSet),
       },
     });
   } catch (error) {
@@ -122,6 +141,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const bpm = Math.max(0, Math.min(400, Math.round(Number(body.bpm) || 0)));
+    const measureNotesJson = Array.isArray(body.measureNotes)
+      ? JSON.stringify(body.measureNotes)
+      : typeof body.measureNotesJson === "string"
+      ? body.measureNotesJson
+      : "[]";
+
     const piece = await prisma.piece.create({
       data: {
         title,
@@ -133,12 +159,15 @@ export async function POST(req: NextRequest) {
         difficulty: ["EASY", "MEDIUM", "HARD"].includes(body.difficulty)
           ? body.difficulty
           : "MEDIUM",
+        bpm,
         notes: (body.notes || "").trim(),
+        referenceUrl: (body.referenceUrl || "").trim(),
+        focusInstruments: normalizeTags(body.focusInstruments || ""),
+        measureNotesJson,
         createdBy: (body.createdBy || "").trim(),
       },
     });
 
-    // Optional initial vote if user provided one when adding the piece
     if (body.userId) {
       await prisma.pieceVote.upsert({
         where: {
@@ -174,4 +203,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-

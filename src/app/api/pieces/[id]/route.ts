@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma, savePersistentSnapshot } from "@/lib/prisma";
-import { normalizeTags, recalculateSchedule } from "@/lib/scheduler";
+import {
+  normalizeTags,
+  parseMeasureNotes,
+  recalculateSchedule,
+} from "@/lib/scheduler";
 
 export async function PATCH(
   req: NextRequest,
@@ -35,9 +39,59 @@ export async function PATCH(
     ) {
       data.difficulty = body.difficulty;
     }
+    if (body.bpm !== undefined) {
+      data.bpm = Math.max(0, Math.min(400, Math.round(Number(body.bpm) || 0)));
+    }
     if (typeof body.notes === "string") {
       data.notes = body.notes.trim();
     }
+    if (typeof body.referenceUrl === "string") {
+      data.referenceUrl = body.referenceUrl.trim();
+    }
+    if (
+      typeof body.focusInstruments === "string" ||
+      Array.isArray(body.focusInstruments)
+    ) {
+      data.focusInstruments = normalizeTags(body.focusInstruments);
+    }
+    if (Array.isArray(body.measureNotes)) {
+      data.measureNotesJson = JSON.stringify(body.measureNotes);
+    } else if (typeof body.measureNotesJson === "string") {
+      data.measureNotesJson = body.measureNotesJson;
+    }
+
+    // Convenience action: add or remove a single measure note
+    if (body.addMeasureNote && typeof body.addMeasureNote === "object") {
+      const existingPiece = await prisma.piece.findUnique({
+        where: { id },
+        select: { measureNotesJson: true },
+      });
+      const currentNotes = parseMeasureNotes(existingPiece?.measureNotesJson);
+      const noteText = String(body.addMeasureNote.note || "").trim();
+      if (noteText) {
+        currentNotes.push({
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          measure: String(body.addMeasureNote.measure || "").trim(),
+          instrument: String(body.addMeasureNote.instrument || "").trim(),
+          note: noteText,
+          author: String(body.addMeasureNote.author || "").trim(),
+          createdAt: new Date().toISOString(),
+        });
+        data.measureNotesJson = JSON.stringify(currentNotes);
+      }
+    }
+
+    if (typeof body.removeMeasureNoteId === "string") {
+      const existingPiece = await prisma.piece.findUnique({
+        where: { id },
+        select: { measureNotesJson: true },
+      });
+      const currentNotes = parseMeasureNotes(
+        existingPiece?.measureNotesJson
+      ).filter((n) => n.id !== body.removeMeasureNoteId);
+      data.measureNotesJson = JSON.stringify(currentNotes);
+    }
+
     if (body.lastPracticedAt !== undefined) {
       data.lastPracticedAt = body.lastPracticedAt
         ? new Date(body.lastPracticedAt)
@@ -80,4 +134,3 @@ export async function DELETE(
     );
   }
 }
-

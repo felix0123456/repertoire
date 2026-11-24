@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { LogOut, Download, Upload } from "lucide-react";
 import {
+  BIGBAND_INSTRUMENTS,
   ConcertEventItem,
   PieceItem,
   RehearsalConfigItem,
@@ -53,8 +54,13 @@ export default function HomePage() {
   const [currentUser, setCurrentUser] = useState<{
     id: string;
     name: string;
+    instrument?: string;
   } | null>(null);
   const [nameInput, setNameInput] = useState("");
+  const [instrumentInput, setInstrumentInput] = useState("");
+  const [showInstrumentEditor, setShowInstrumentEditor] = useState(false);
+  const [customInstrumentDraft, setCustomInstrumentDraft] = useState("");
+  const [showMobileHeaderMenu, setShowMobileHeaderMenu] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
   const [pendingOnboarding, setPendingOnboarding] = useState(false);
@@ -199,7 +205,10 @@ export default function HomePage() {
             const uRes = await fetch("/api/user", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ name: parsed.name }),
+              body: JSON.stringify({
+                name: parsed.name,
+                instrument: parsed.instrument || undefined,
+              }),
             });
             if (uRes.ok) {
               const uData = await uRes.json();
@@ -311,13 +320,17 @@ export default function HomePage() {
       const res = await fetch("/api/user", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: trimmed }),
+        body: JSON.stringify({
+          name: trimmed,
+          instrument: instrumentInput.trim() || undefined,
+        }),
       });
       if (res.ok) {
         const data = await res.json();
         setCurrentUser(data.user);
         localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(data.user));
         setNameInput("");
+        setInstrumentInput("");
         setShowLoginModal(false);
         const loadedPieces = await fetchAllData(data.user.id, data.user.name);
         const ratedCount = loadedPieces.filter((p) => Boolean(p.myVote)).length;
@@ -342,6 +355,28 @@ export default function HomePage() {
     } finally {
       setLoggingIn(false);
     }
+  };
+
+  const handleUpdateUserInstrument = async (newInstrument: string) => {
+    if (!currentUser) return;
+    const cleaned = newInstrument.trim();
+    const res = await fetch("/api/user", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: currentUser.name,
+        instrument: cleaned,
+      }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.user) {
+        setCurrentUser(data.user);
+        localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(data.user));
+        await fetchAllData(data.user.id, data.user.name);
+      }
+    }
+    setShowInstrumentEditor(false);
   };
 
   const handleLogout = () => {
@@ -402,7 +437,7 @@ export default function HomePage() {
   const nextConcert = concerts[0] || null;
 
   return (
-    <div className="min-h-screen bg-[var(--bg-paper)] pb-16 text-[var(--ink-primary)] lg:pb-0">
+    <div className="min-h-screen bg-[var(--bg-paper)] pb-20 text-[var(--ink-primary)] md:pb-0">
       {/* Hidden Backup File Input (shared by Mobile & Desktop) */}
       <input
         ref={fileInputRef}
@@ -412,10 +447,10 @@ export default function HomePage() {
         className="hidden"
       />
 
-      {/* Editorial Score Ledger Masthead — Compact on Mobile, 12-Column Asymmetric Grid on Desktop */}
-      <header className="sticky top-0 z-30 border-t-2 border-b border-[var(--rule-heavy)] bg-[var(--bg-surface)] lg:border-t-4">
-        {/* MOBILE COMPACT TOP BAR (< 1024px) */}
-        <div className="flex items-center justify-between gap-2 px-3 py-2 lg:hidden">
+      {/* Editorial Score Ledger Masthead — Compact on Mobile (< 768px), 12-Column Asymmetric Grid on Desktop (>= 768px) */}
+      <header className="sticky top-0 z-30 border-t-2 border-b border-[var(--rule-heavy)] bg-[var(--bg-surface)] md:border-t-4">
+        {/* MOBILE COMPACT TOP BAR (< 768px) */}
+        <div className="relative flex items-center justify-between gap-2 px-3 py-2 md:hidden">
           <div className="min-w-0">
             <h1 className="font-display truncate text-base font-semibold leading-tight text-[var(--ink-primary)]">
               Repertoire & Probeplan
@@ -428,6 +463,20 @@ export default function HomePage() {
           <div className="flex shrink-0 items-center gap-1.5">
             {currentUser ? (
               <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomInstrumentDraft(currentUser.instrument || "");
+                    setShowInstrumentEditor(true);
+                  }}
+                  title="Instrument auswählen / ändern"
+                  className="type-kicker inline-flex items-center gap-1 border border-[var(--rule-border)] bg-[var(--bg-paper)] px-2 py-1 text-[10px] text-[var(--ink-primary)] hover:border-[var(--ink-primary)] cursor-pointer"
+                >
+                  <span>🎺</span>
+                  <span className="max-w-[90px] truncate font-bold">
+                    {currentUser.instrument || "+ Instrument wählen"}
+                  </span>
+                </button>
                 {pieces.length > 0 && (
                   <button
                     type="button"
@@ -437,17 +486,6 @@ export default function HomePage() {
                     ★ ({pieces.filter((p) => !p.myVote).length})
                   </button>
                 )}
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  title="Spieler wechseln"
-                  className="type-kicker inline-flex items-center gap-1 border border-[var(--ink-primary)] bg-[var(--bg-paper)] px-2 py-1 text-[10px] text-[var(--ink-primary)] cursor-pointer"
-                >
-                  <span className="max-w-[72px] truncate font-bold">
-                    {currentUser.name}
-                  </span>
-                  <LogOut className="h-3 w-3 text-[var(--ink-secondary)]" />
-                </button>
               </>
             ) : (
               <button
@@ -461,17 +499,97 @@ export default function HomePage() {
 
             <button
               type="button"
-              onClick={handleExportBackup}
-              title="Backup exportieren"
-              className="border border-[var(--rule-border)] bg-[var(--bg-paper)] p-1.5 text-[var(--ink-secondary)] cursor-pointer"
+              onClick={() => setShowMobileHeaderMenu((v) => !v)}
+              title="Weitere Aktionen (Export / Import / Spieler wechseln)"
+              className="type-kicker inline-flex items-center justify-center border border-[var(--ink-primary)] bg-[var(--bg-paper)] px-2 py-1 text-xs font-bold text-[var(--ink-primary)] cursor-pointer"
             >
-              <Download className="h-3.5 w-3.5" />
+              ⋯
             </button>
           </div>
+
+          {/* Mobile Secondary Actions Dropdown (⋯) */}
+          {showMobileHeaderMenu && (
+            <div className="absolute top-full right-3 z-50 mt-1 w-60 border-2 border-[var(--rule-heavy)] bg-[var(--bg-surface)] p-2 shadow-none">
+              <div className="type-kicker border-b border-[var(--rule-border)] px-2 py-1 text-[10px] text-[var(--ink-muted)]">
+                AKTIONEN & PROFIL
+              </div>
+              {currentUser && (
+                <div className="border-b border-[var(--rule-border)] px-2 py-1.5 text-xs">
+                  <div className="font-semibold text-[var(--ink-primary)]">
+                    {currentUser.name}
+                  </div>
+                  <div className="text-[11px] text-[var(--ink-secondary)]">
+                    🎺 {currentUser.instrument || "Kein Instrument hinterlegt"}
+                  </div>
+                </div>
+              )}
+              <div className="mt-1 space-y-1">
+                {currentUser && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowMobileHeaderMenu(false);
+                      setCustomInstrumentDraft(currentUser.instrument || "");
+                      setShowInstrumentEditor(true);
+                    }}
+                    className="type-kicker flex w-full items-center justify-between px-2 py-1.5 text-left text-[11px] text-[var(--ink-primary)] hover:bg-[var(--bg-recessed)] cursor-pointer"
+                  >
+                    <span>🎺 INSTRUMENT ÄNDERN</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowMobileHeaderMenu(false);
+                    handleExportBackup();
+                  }}
+                  className="type-kicker flex w-full items-center gap-2 px-2 py-1.5 text-left text-[11px] text-[var(--ink-primary)] hover:bg-[var(--bg-recessed)] cursor-pointer"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  <span>JSON-BACKUP EXPORTIEREN</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowMobileHeaderMenu(false);
+                    fileInputRef.current?.click();
+                  }}
+                  className="type-kicker flex w-full items-center gap-2 px-2 py-1.5 text-left text-[11px] text-[var(--ink-primary)] hover:bg-[var(--bg-recessed)] cursor-pointer"
+                >
+                  <Upload className="h-3.5 w-3.5" />
+                  <span>JSON-BACKUP IMPORTIEREN</span>
+                </button>
+                {currentUser ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowMobileHeaderMenu(false);
+                      handleLogout();
+                    }}
+                    className="type-kicker flex w-full items-center gap-2 border-t border-[var(--rule-border)] px-2 pt-2 pb-1 text-left text-[11px] text-[var(--accent)] hover:bg-[var(--bg-recessed)] cursor-pointer"
+                  >
+                    <LogOut className="h-3.5 w-3.5" />
+                    <span>SPIELER WECHSELN ({currentUser.name})</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowMobileHeaderMenu(false);
+                      setShowLoginModal(true);
+                    }}
+                    className="type-kicker flex w-full items-center gap-2 border-t border-[var(--rule-border)] px-2 pt-2 pb-1 text-left text-[11px] text-[var(--accent)] cursor-pointer"
+                  >
+                    <span>SPIELER ANMELDEN</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* DESKTOP 12-COLUMN MASTHEAD (>= 1024px) */}
-        <div className="mx-auto hidden max-w-[1440px] lg:block">
+        {/* DESKTOP 12-COLUMN MASTHEAD (>= 768px) */}
+        <div className="mx-auto hidden max-w-[1440px] md:block">
           <div className="grid grid-cols-1 lg:grid-cols-12">
             {/* Columns 1–7: Editorial Masthead & Live Ledger Metrics */}
             <div className="flex flex-col justify-between border-b border-[var(--rule-border)] px-4 py-4 sm:px-6 lg:col-span-7 lg:border-r lg:border-b-0">
@@ -551,15 +669,33 @@ export default function HomePage() {
               <div className="mt-2">
                 {currentUser ? (
                   <div className="flex flex-wrap items-center justify-between gap-2 border border-[var(--ink-primary)] bg-[var(--bg-surface)] px-3 py-1.5">
-                    <div>
-                      <span className="type-kicker mr-2 text-[var(--ink-muted)]">
-                        AKTIVER SPIELER:
-                      </span>
-                      <span className="font-display text-sm font-semibold text-[var(--ink-primary)]">
-                        {currentUser.name}
-                      </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div>
+                        <span className="type-kicker mr-1.5 text-[var(--ink-muted)]">
+                          SPIELER:
+                        </span>
+                        <span className="font-display text-sm font-semibold text-[var(--ink-primary)]">
+                          {currentUser.name}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCustomInstrumentDraft(
+                            currentUser.instrument || ""
+                          );
+                          setShowInstrumentEditor(true);
+                        }}
+                        title="Instrument für Register-Probebedarf wählen"
+                        className="type-kicker inline-flex items-center gap-1 border border-[var(--rule-border)] bg-[var(--bg-paper)] px-2 py-0.5 text-[10px] text-[var(--ink-primary)] hover:border-[var(--ink-primary)] cursor-pointer"
+                      >
+                        <span>🎺</span>
+                        <span>
+                          {currentUser.instrument || "+ Instrument wählen"}
+                        </span>
+                      </button>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2.5">
                       {pieces.length > 0 && (
                         <button
                           type="button"
@@ -583,19 +719,31 @@ export default function HomePage() {
                 ) : (
                   <form
                     onSubmit={handleLoginSubmit}
-                    className="flex items-stretch gap-2"
+                    className="flex items-stretch gap-1.5"
                   >
                     <input
                       type="text"
                       value={nameInput}
                       onChange={(e) => setNameInput(e.target.value)}
-                      placeholder="Deinen Namen eingeben (ohne Auswahlliste)..."
-                      className="w-full border border-[var(--ink-primary)] bg-[var(--bg-surface)] px-3 py-1.5 text-sm text-[var(--ink-primary)] placeholder-[var(--ink-muted)] focus:outline-none"
+                      placeholder="Dein Name..."
+                      className="w-full border border-[var(--ink-primary)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-sm text-[var(--ink-primary)] placeholder-[var(--ink-muted)] focus:outline-none"
                     />
+                    <select
+                      value={instrumentInput}
+                      onChange={(e) => setInstrumentInput(e.target.value)}
+                      className="border border-[var(--ink-primary)] bg-[var(--bg-surface)] px-2 py-1.5 text-xs text-[var(--ink-primary)] focus:outline-none"
+                    >
+                      <option value="">🎺 Instrument (optional)</option>
+                      {BIGBAND_INSTRUMENTS.map((inst) => (
+                        <option key={inst} value={inst}>
+                          {inst}
+                        </option>
+                      ))}
+                    </select>
                     <button
                       type="submit"
                       disabled={loggingIn || !nameInput.trim()}
-                      className="type-kicker ui-transition bg-[var(--accent)] px-4 py-1.5 text-[var(--accent-ink)] disabled:opacity-40 cursor-pointer"
+                      className="type-kicker ui-transition shrink-0 bg-[var(--accent)] px-3.5 py-1.5 text-[var(--accent-ink)] disabled:opacity-40 cursor-pointer"
                     >
                       ANMELDEN
                     </button>
@@ -608,7 +756,7 @@ export default function HomePage() {
           {/* Desktop Ledger Section Index Bar */}
           <nav
             aria-label="Hauptnavigation Desktop"
-            className="grid grid-cols-5 border-t border-[var(--rule-border)] bg-[var(--bg-surface)]"
+            className="hidden md:grid grid-cols-5 border-t border-[var(--rule-border)] bg-[var(--bg-surface)]"
           >
             {(
               [
@@ -750,6 +898,7 @@ export default function HomePage() {
               <TerminkalenderTab
                 sessions={sessions}
                 concerts={concerts}
+                pieces={pieces}
                 suggestions={suggestions}
                 onRefresh={async () => {
                   await fetchAllData();
@@ -797,10 +946,10 @@ export default function HomePage() {
         )}
       </main>
 
-      {/* MOBILE FIXED BOTTOM TAB BAR (< 1024px) */}
+      {/* MOBILE FIXED BOTTOM TAB BAR (< 768px) */}
       <nav
         aria-label="Mobile Hauptnavigation"
-        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t-2 border-[var(--rule-heavy)] bg-[var(--bg-surface)] lg:hidden"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-40 grid grid-cols-5 bg-[var(--bg-card)] border-t-2 border-[var(--border-ink)]"
       >
         {(
           [
@@ -890,10 +1039,85 @@ export default function HomePage() {
           pieces={pieces}
           suggestions={suggestions}
           currentUser={currentUser}
+          userInstrument={currentUser.instrument || ""}
           onRefresh={async () => {
             await fetchAllData();
           }}
         />
+      )}
+
+      {/* Instrument Selector Modal (Inline Chip Action) */}
+      {showInstrumentEditor && currentUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-md border-2 border-[var(--rule-heavy)] bg-[var(--bg-surface)] p-6">
+            <div className="type-kicker text-[var(--accent)]">
+              SPIELER-PROFIL & REGISTER
+            </div>
+            <h2 className="type-section-h2 mt-1 text-[var(--ink-primary)]">
+              Welches Instrument spielst du, {currentUser.name}?
+            </h2>
+            <p className="mt-1.5 text-xs text-[var(--ink-secondary)]">
+              Damit wir den Probebedarf pro Register (z. B. Posaune, Saxophon,
+              Trompete, Rhythmusgruppe) direkt auf den Stücken anzeigen können:
+            </p>
+
+            <div className="mt-4 grid grid-cols-2 gap-1.5">
+              {BIGBAND_INSTRUMENTS.map((inst) => {
+                const isSelected =
+                  (currentUser.instrument || "").toLowerCase() ===
+                  inst.toLowerCase();
+                return (
+                  <button
+                    key={inst}
+                    type="button"
+                    onClick={() => handleUpdateUserInstrument(inst)}
+                    className={`type-kicker border px-2.5 py-2 text-left text-[11px] cursor-pointer ${
+                      isSelected
+                        ? "border-[var(--ink-primary)] bg-[var(--ink-primary)] font-bold text-[var(--bg-surface)]"
+                        : "border-[var(--rule-border)] bg-[var(--bg-paper)] text-[var(--ink-primary)] hover:border-[var(--ink-primary)]"
+                    }`}
+                  >
+                    🎺 {inst}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="mt-4 border-t border-[var(--rule-border)] pt-3">
+              <label className="type-kicker mb-1 block text-[var(--ink-secondary)]">
+                Oder eigenes Instrument eingeben
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={customInstrumentDraft}
+                  onChange={(e) => setCustomInstrumentDraft(e.target.value)}
+                  placeholder="z. B. Flügelhorn, Percussion..."
+                  className="flex-1 border border-[var(--ink-primary)] bg-[var(--bg-paper)] px-3 py-1.5 text-xs text-[var(--ink-primary)] focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleUpdateUserInstrument(customInstrumentDraft)
+                  }
+                  className="type-kicker bg-[var(--accent)] px-3.5 py-1.5 text-[11px] font-bold text-[var(--accent-ink)] cursor-pointer"
+                >
+                  SPEICHERN
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-4 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowInstrumentEditor(false)}
+                className="type-kicker border border-[var(--rule-border)] bg-[var(--bg-paper)] px-4 py-2 text-xs text-[var(--ink-secondary)] cursor-pointer"
+              >
+                SCHLIESSEN
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Prompt Login Modal */}
@@ -904,23 +1128,64 @@ export default function HomePage() {
               SPIELER-REGISTRIERUNG
             </div>
             <h2 className="type-section-h2 mt-1 text-[var(--ink-primary)]">
-              Wie lautet dein Name?
+              Wie lautet dein Name & Instrument?
             </h2>
             <p className="mt-2 text-sm text-[var(--ink-secondary)]">
-              Gib deinen Vornamen oder Spitznamen ein, um Stücke zu bewerten und
-              Proben-Protokolle einzutragen. Es wird keine öffentliche
-              Namensliste beim Login angezeigt.
+              Gib deinen Vornamen oder Spitznamen sowie dein Instrument ein, um
+              Stücke zu bewerten und den Probebedarf deines Registers zu
+              markieren.
             </p>
             <form onSubmit={handleLoginSubmit} className="mt-5 space-y-4">
-              <input
-                type="text"
-                required
-                autoFocus
-                value={nameInput}
-                onChange={(e) => setNameInput(e.target.value)}
-                placeholder="Dein Vorname / Spitzname..."
-                className="w-full border border-[var(--ink-primary)] bg-[var(--bg-paper)] px-3.5 py-2.5 text-sm text-[var(--ink-primary)] placeholder-[var(--ink-muted)] focus:outline-none"
-              />
+              <div>
+                <label className="type-kicker mb-1 block text-[var(--ink-secondary)]">
+                  DEIN VORNAME / SPITZNAME *
+                </label>
+                <input
+                  type="text"
+                  required
+                  autoFocus
+                  value={nameInput}
+                  onChange={(e) => setNameInput(e.target.value)}
+                  placeholder="Dein Vorname / Spitzname..."
+                  className="w-full border border-[var(--ink-primary)] bg-[var(--bg-paper)] px-3.5 py-2.5 text-sm text-[var(--ink-primary)] placeholder-[var(--ink-muted)] focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="type-kicker mb-1.5 block text-[var(--ink-secondary)]">
+                  DEIN INSTRUMENT IN DER BIGBAND
+                </label>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {BIGBAND_INSTRUMENTS.map((inst) => {
+                    const active =
+                      instrumentInput.toLowerCase() === inst.toLowerCase();
+                    return (
+                      <button
+                        key={inst}
+                        type="button"
+                        onClick={() =>
+                          setInstrumentInput(active ? "" : inst)
+                        }
+                        className={`type-kicker border px-2.5 py-1.5 text-left text-[10px] cursor-pointer ${
+                          active
+                            ? "border-[var(--ink-primary)] bg-[var(--ink-primary)] font-bold text-[var(--bg-surface)]"
+                            : "border-[var(--rule-border)] bg-[var(--bg-paper)] text-[var(--ink-primary)]"
+                        }`}
+                      >
+                        🎺 {inst}
+                      </button>
+                    );
+                  })}
+                </div>
+                <input
+                  type="text"
+                  value={instrumentInput}
+                  onChange={(e) => setInstrumentInput(e.target.value)}
+                  placeholder="Oder eigenes Instrument eingeben..."
+                  className="mt-2 w-full border border-[var(--rule-border)] bg-[var(--bg-paper)] px-3 py-1.5 text-xs text-[var(--ink-primary)] placeholder-[var(--ink-muted)] focus:border-[var(--ink-primary)] focus:outline-none"
+                />
+              </div>
+
               <div className="flex justify-end gap-2">
                 <button
                   type="button"
@@ -934,7 +1199,7 @@ export default function HomePage() {
                   disabled={loggingIn || !nameInput.trim()}
                   className="type-kicker bg-[var(--accent)] px-5 py-2.5 text-[var(--accent-ink)] disabled:opacity-40 cursor-pointer"
                 >
-                  {loggingIn ? "SPEICHERT..." : "NAME BESTÄTIGEN"}
+                  {loggingIn ? "SPEICHERT..." : "ANMELDEN"}
                 </button>
               </div>
             </form>

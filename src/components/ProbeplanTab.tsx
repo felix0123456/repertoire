@@ -17,8 +17,13 @@ import {
   Check,
   QrCode,
   Share2,
+  RefreshCw,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import {
+  BIGBAND_REGISTER_FAMILIES,
+  getRegisterFamily,
   PieceItem,
   RehearsalConfigItem,
   RehearsalSessionItem,
@@ -26,6 +31,8 @@ import {
 } from "@/types";
 import ScoreSelector from "./ScoreSelector";
 import SessionQrModal from "./SessionQrModal";
+import KonzertmeisterSyncModal from "./KonzertmeisterSyncModal";
+import MusicStandModal from "./MusicStandModal";
 import { buildAppShareUrl, shareOrCopyLink } from "@/lib/share";
 
 interface ProbeplanTabProps {
@@ -33,11 +40,21 @@ interface ProbeplanTabProps {
   sessions: RehearsalSessionItem[];
   pieces: PieceItem[];
   suggestions: SuggestionsData;
-  currentUser: { id: string; name: string } | null;
+  currentUser: { id: string; name: string; instrument?: string } | null;
   onRefresh: () => Promise<void>;
   onRequireLogin: () => void;
   focusedSessionId?: string | null;
   onClearFocusedSession?: () => void;
+}
+
+function formatClockTime(baseDateIso: string, offsetMinutes: number): string {
+  const d = new Date(baseDateIso);
+  if (Number.isNaN(d.getTime())) return "";
+  const shifted = new Date(d.getTime() + offsetMinutes * 60 * 1000);
+  return shifted.toLocaleTimeString("de-DE", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 export default function ProbeplanTab({
@@ -101,6 +118,27 @@ export default function ProbeplanTab({
   const [highlightedSessionId, setHighlightedSessionId] = useState<
     string | null
   >(null);
+
+  // Konzertmeister Sync Modal & Attendance Expand state
+  const [showKmModal, setShowKmModal] = useState<boolean>(false);
+  const [kmDefaultSessionId, setKmDefaultSessionId] = useState<string | null>(
+    null
+  );
+  const [expandedAttendanceSessionId, setExpandedAttendanceSessionId] =
+    useState<string | null>(null);
+
+  // Live Music Stand Mode state
+  const [musicStandSessionId, setMusicStandSessionId] = useState<string | null>(
+    null
+  );
+  const [musicStandInitialIndex, setMusicStandInitialIndex] =
+    useState<number>(0);
+
+  // Inline Per-Session Per-Piece BPM editor state: key = `${sessionId}_${pieceId}`
+  const [openBpmKey, setOpenBpmKey] = useState<string | null>(null);
+  const [bpmDraftVal, setBpmDraftVal] = useState<string>("");
+  const [bpmCommentDraftVal, setBpmCommentDraftVal] = useState<string>("");
+  const [savingBpmKey, setSavingBpmKey] = useState<string | null>(null);
 
   const lastHandledSessionRef = useRef<string | null>(null);
 
@@ -320,6 +358,96 @@ export default function ProbeplanTab({
     await onRefresh();
   };
 
+  const toggleAbsentInstrumentInSession = async (
+    session: RehearsalSessionItem,
+    registerName: string
+  ) => {
+    const combined = Array.from(
+      new Set([
+        ...session.absentInstrumentList,
+        ...session.understaffedRegisterList,
+      ])
+    );
+    const targetLow = registerName.toLowerCase();
+    const exists = combined.some(
+      (r) =>
+        r.toLowerCase() === targetLow ||
+        getRegisterFamily(r).toLowerCase() === targetLow
+    );
+    const next = exists
+      ? combined.filter(
+          (r) =>
+            r.toLowerCase() !== targetLow &&
+            getRegisterFamily(r).toLowerCase() !== targetLow
+        )
+      : [...combined, registerName];
+
+    await fetch(`/api/rehearsals/${session.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "update-meta",
+        absentInstruments: next.join(", "),
+      }),
+    });
+    await onRefresh();
+  };
+
+  const openBpmEditor = (
+    sessionId: string,
+    pieceId: string,
+    currentSessionBpm: number,
+    lastSessionBpm: number | undefined,
+    pieceTargetBpm: number,
+    currentComment: string
+  ) => {
+    const key = `${sessionId}_${pieceId}`;
+    if (openBpmKey === key) {
+      setOpenBpmKey(null);
+      return;
+    }
+    const initBpm =
+      currentSessionBpm > 0
+        ? currentSessionBpm
+        : lastSessionBpm && lastSessionBpm > 0
+        ? lastSessionBpm
+        : pieceTargetBpm > 0
+        ? pieceTargetBpm
+        : 0;
+    setBpmDraftVal(initBpm > 0 ? String(initBpm) : "");
+    setBpmCommentDraftVal(currentComment || "");
+    setOpenBpmKey(key);
+  };
+
+  const handleSavePieceBpm = async (
+    sessionId: string,
+    pieceId: string,
+    overrideBpm?: number
+  ) => {
+    const key = `${sessionId}_${pieceId}`;
+    setSavingBpmKey(key);
+    try {
+      const numericBpm =
+        overrideBpm !== undefined
+          ? overrideBpm
+          : Math.max(0, Math.min(400, Math.round(Number(bpmDraftVal) || 0)));
+      if (overrideBpm !== undefined) {
+        setBpmDraftVal(numericBpm > 0 ? String(numericBpm) : "");
+      }
+      await handleSessionAction(sessionId, {
+        action: "update-piece-bpm",
+        pieceId,
+        sessionBpm: numericBpm,
+        sessionBpmComment: bpmCommentDraftVal.trim(),
+      });
+      if (overrideBpm === undefined) {
+        setOpenBpmKey(null);
+      }
+    } finally {
+      setSavingBpmKey(null);
+    }
+  };
+
   const handleSessionAction = async (
     sessionId: string,
     payload: Record<string, unknown>
@@ -418,6 +546,16 @@ export default function ProbeplanTab({
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
+                onClick={() => {
+                  setKmDefaultSessionId(activeMobileSessionId || null);
+                  setShowKmModal(true);
+                }}
+                className="type-kicker inline-flex items-center gap-1 border border-[var(--ink-primary)] bg-[var(--bg-paper)] px-2 py-1 text-[10px] font-bold text-[var(--ink-primary)] cursor-pointer"
+              >
+                🔄 KM-SYNC
+              </button>
+              <button
+                type="button"
                 onClick={() => setShowMobileConfig((v) => !v)}
                 className={`type-kicker border px-2 py-1 text-[10px] cursor-pointer ${
                   showMobileConfig
@@ -490,17 +628,35 @@ export default function ProbeplanTab({
             </h2>
           </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              setNewTitle(`Probe ${sessions.length + 1}`);
-              setShowNewSessionModal(true);
-            }}
-            className="type-kicker ui-transition flex w-full items-center justify-center gap-2 bg-[var(--accent)] px-4 py-3 text-[var(--accent-ink)] cursor-pointer"
-          >
-            <Plus className="h-4 w-4" />
-            NEUEN PROBETERMIN ANLEGEN
-          </button>
+          <div className="space-y-2">
+            <button
+              type="button"
+              onClick={() => {
+                setNewTitle(`Probe ${sessions.length + 1}`);
+                setShowNewSessionModal(true);
+              }}
+              className="type-kicker ui-transition flex w-full items-center justify-center gap-2 bg-[var(--accent)] px-4 py-3 text-[var(--accent-ink)] cursor-pointer"
+            >
+              <Plus className="h-4 w-4" />
+              NEUEN PROBETERMIN ANLEGEN
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setKmDefaultSessionId(
+                  activeMobileSessionId !== "__ALL__"
+                    ? activeMobileSessionId
+                    : upcomingSessions[0]?.id || null
+                );
+                setShowKmModal(true);
+              }}
+              className="type-kicker ui-transition flex w-full items-center justify-center gap-2 border-2 border-[var(--ink-primary)] bg-[var(--bg-recessed)] px-4 py-2.5 font-bold text-[var(--ink-primary)] hover:bg-[var(--ink-primary)] hover:text-[var(--bg-surface)] cursor-pointer"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              🔄 KONZERTMEISTER-SYNC
+            </button>
+          </div>
 
           {/* Mode Selector */}
           <div className="space-y-1.5">
@@ -754,6 +910,29 @@ export default function ProbeplanTab({
                       )}
                     </div>
 
+                    {/* Total Estimated Rehearsal Duration Badge */}
+                    <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                      <span className="font-mono-tabular border border-[var(--ink-primary)] bg-[var(--bg-recessed)] px-2.5 py-1 text-[11px] font-bold text-[var(--ink-primary)]">
+                        ⏱ GESCHÄTZTE ÜBUNGSDAUER: ~
+                        {session.totalEstimatedMinutes} MIN.
+                        {session.hasBreak
+                          ? ` (INKL. ${session.breakDurationMinutes} MIN. PAUSE)`
+                          : ""}
+                      </span>
+                      {session.scheduledDate &&
+                        session.totalEstimatedMinutes > 0 && (
+                          <span className="font-mono-tabular border border-[var(--rule-border)] bg-[var(--bg-paper)] px-2.5 py-1 text-[11px] font-semibold text-[var(--ink-secondary)]">
+                            🕒 ZEITFENSTER:{" "}
+                            {formatClockTime(session.scheduledDate, 0)} –{" "}
+                            {formatClockTime(
+                              session.scheduledDate,
+                              session.totalEstimatedMinutes
+                            )}{" "}
+                            Uhr
+                          </span>
+                        )}
+                    </div>
+
                     {session.additionalInfo && (
                       <div className="mt-2.5 border-l-2 border-[var(--ink-primary)] bg-[var(--bg-paper)] px-3 py-2 text-xs text-[var(--ink-primary)] whitespace-pre-wrap">
                         <span className="type-kicker block text-[var(--ink-muted)]">
@@ -766,6 +945,45 @@ export default function ProbeplanTab({
 
                   {/* Session Action Bar */}
                   <div className="flex flex-wrap items-center gap-1.5">
+                    {session.pieces.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMusicStandInitialIndex(0);
+                          setMusicStandSessionId(session.id);
+                        }}
+                        title="Vollbild Notenpult-Modus für die laufende Probe öffnen"
+                        className="type-kicker inline-flex items-center gap-1 border-2 border-[var(--ink-primary)] bg-[var(--ink-primary)] px-3 py-1.5 font-bold text-[var(--bg-surface)] hover:bg-[var(--accent)] hover:border-[var(--accent)] cursor-pointer"
+                      >
+                        🎼 NOTENPULT-MODUS
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleSessionAction(session.id, {
+                          action: "update-break",
+                          hasBreak: !session.hasBreak,
+                          breakDurationMinutes:
+                            session.breakDurationMinutes || 15,
+                          breakAfterPieceIndex:
+                            session.breakAfterPieceIndex ||
+                            Math.max(1, Math.floor(session.pieces.length / 2)),
+                        })
+                      }
+                      className={`type-kicker inline-flex items-center gap-1 border px-2.5 py-1.5 cursor-pointer ${
+                        session.hasBreak
+                          ? "border-[var(--ink-primary)] bg-[var(--bg-recessed)] font-bold text-[var(--ink-primary)]"
+                          : "border-[var(--rule-border)] bg-[var(--bg-paper)] text-[var(--ink-primary)] hover:border-[var(--ink-primary)]"
+                      }`}
+                    >
+                      ☕{" "}
+                      {session.hasBreak
+                        ? "PAUSE KONFIGURIEREN / ENTFERNEN"
+                        : "+ PAUSE IN SESSION EINFÜGEN"}
+                    </button>
+
                     <button
                       type="button"
                       onClick={() => setQrModalSession(session)}
@@ -867,6 +1085,243 @@ export default function ProbeplanTab({
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
+                  </div>
+                </div>
+
+                {/* Konzertmeister Attendance & Register Exclusion Display */}
+                <div className="mt-4 border border-[var(--ink-primary)] bg-[var(--bg-paper)] p-3.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="type-kicker text-[var(--ink-primary)]">
+                        KONZERTMEISTER-ANWESENHEIT:
+                      </span>
+                      {session.attendance.length > 0 ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setExpandedAttendanceSessionId(
+                              expandedAttendanceSessionId === session.id
+                                ? null
+                                : session.id
+                            )
+                          }
+                          className="font-mono-tabular inline-flex items-center gap-1.5 border border-[var(--ink-primary)] bg-[var(--bg-surface)] px-2.5 py-1 text-xs font-bold text-[var(--ink-primary)] cursor-pointer"
+                        >
+                          <span>
+                            ✓{" "}
+                            {
+                              session.attendance.filter(
+                                (a) => a.status === "PRESENT"
+                              ).length
+                            }{" "}
+                            Zugesagt · ✗{" "}
+                            {
+                              session.attendance.filter(
+                                (a) => a.status === "ABSENT"
+                              ).length
+                            }{" "}
+                            Abgesagt
+                          </span>
+                          {expandedAttendanceSessionId === session.id ? (
+                            <ChevronUp className="h-3.5 w-3.5" />
+                          ) : (
+                            <ChevronDown className="h-3.5 w-3.5" />
+                          )}
+                        </button>
+                      ) : (
+                        <span className="text-xs text-[var(--ink-muted)]">
+                          Noch keine Rückmeldungen importiert
+                        </span>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setKmDefaultSessionId(session.id);
+                        setShowKmModal(true);
+                      }}
+                      className="type-kicker inline-flex items-center gap-1 border border-[var(--ink-primary)] bg-[var(--bg-recessed)] px-2.5 py-1 text-[10px] font-bold text-[var(--ink-primary)] hover:bg-[var(--ink-primary)] hover:text-[var(--bg-surface)] cursor-pointer"
+                    >
+                      <RefreshCw className="h-3 w-3" /> 🔄 Aus Konzertmeister
+                      aktualisieren
+                    </button>
+                  </div>
+
+                  {/* Expandable Full Attendance List grouped by Register / Instrument */}
+                  {expandedAttendanceSessionId === session.id &&
+                    session.attendance.length > 0 && (
+                      <div className="mt-3 space-y-2 border-t border-[var(--rule-border)] pt-3 text-xs">
+                        {(() => {
+                          const groupOrder = [
+                            ...BIGBAND_REGISTER_FAMILIES,
+                            "Dirigent / Leitung",
+                            "Sonstige",
+                          ];
+                          const grouped = new Map<
+                            string,
+                            typeof session.attendance
+                          >();
+                          for (const entry of session.attendance) {
+                            const fam =
+                              entry.registerFamily ||
+                              getRegisterFamily(entry.instrument || "") ||
+                              entry.instrument ||
+                              "Sonstige";
+                            const bucket = groupOrder.includes(fam)
+                              ? fam
+                              : "Sonstige";
+                            const list = grouped.get(bucket) || [];
+                            list.push(entry);
+                            grouped.set(bucket, list);
+                          }
+                          const activeGroups = groupOrder.filter((g) =>
+                            grouped.has(g)
+                          );
+
+                          return (
+                            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                              {activeGroups.map((groupName) => {
+                                const members = grouped.get(groupName) || [];
+                                const presCount = members.filter(
+                                  (m) => m.status === "PRESENT"
+                                ).length;
+                                const absCount = members.filter(
+                                  (m) => m.status === "ABSENT"
+                                ).length;
+                                const maybeCount = members.filter(
+                                  (m) => m.status === "MAYBE"
+                                ).length;
+                                const isGroupUnderstaffed =
+                                  session.absentInstrumentList.some(
+                                    (r) =>
+                                      r.toLowerCase() ===
+                                        groupName.toLowerCase() ||
+                                      getRegisterFamily(r).toLowerCase() ===
+                                        groupName.toLowerCase()
+                                  ) ||
+                                  session.understaffedRegisterList.some(
+                                    (r) =>
+                                      r.toLowerCase() ===
+                                        groupName.toLowerCase() ||
+                                      getRegisterFamily(r).toLowerCase() ===
+                                        groupName.toLowerCase()
+                                  );
+
+                                return (
+                                  <div
+                                    key={groupName}
+                                    className={`border p-2.5 ${
+                                      isGroupUnderstaffed
+                                        ? "border-[var(--accent)] bg-[var(--bg-surface)]"
+                                        : "border-[var(--rule-border)] bg-[var(--bg-surface)]"
+                                    }`}
+                                  >
+                                    <div className="mb-1.5 flex items-center justify-between gap-2 border-b border-[var(--rule-border)] pb-1">
+                                      <span className="type-kicker text-[10px] font-bold text-[var(--ink-primary)]">
+                                        🎺 {groupName}
+                                      </span>
+                                      <span className="font-mono-tabular text-[10px] text-[var(--ink-secondary)]">
+                                        ✓ {presCount} · ✗ {absCount}
+                                        {maybeCount > 0
+                                          ? ` · ? ${maybeCount}`
+                                          : ""}
+                                      </span>
+                                    </div>
+                                    <div className="flex flex-wrap gap-1">
+                                      {members.map((a, i) => (
+                                        <span
+                                          key={`${groupName}-${i}`}
+                                          className={`border px-2 py-0.5 text-[11px] ${
+                                            a.status === "ABSENT"
+                                              ? "border-[var(--accent)] bg-[var(--bg-paper)] text-[var(--accent)]"
+                                              : a.status === "MAYBE"
+                                              ? "border-[var(--rule-border)] bg-[var(--bg-recessed)] text-[var(--ink-secondary)]"
+                                              : "border-[var(--rule-border)] bg-[var(--bg-paper)] text-[var(--ink-primary)]"
+                                          }`}
+                                        >
+                                          <strong>
+                                            {a.status === "ABSENT"
+                                              ? "✗ "
+                                              : a.status === "MAYBE"
+                                              ? "? "
+                                              : "✓ "}
+                                            {a.userName}
+                                          </strong>
+                                          {a.instrument &&
+                                          a.instrument.toLowerCase() !==
+                                            groupName.toLowerCase()
+                                            ? ` (${a.instrument})`
+                                            : ""}
+                                          {a.comment ? ` — ${a.comment}` : ""}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    )}
+
+                  {/* Abwesende / Unterbesetzte Register Toggle Chips */}
+                  <div className="mt-3 border-t border-[var(--rule-border)] pt-2.5">
+                    <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+                      <span className="type-kicker text-[10px] text-[var(--ink-secondary)]">
+                        ABWESENDE / UNTERBESETZTE REGISTER IN DIESER PROBE:
+                      </span>
+                      {(session.absentInstrumentList.length > 0 ||
+                        session.understaffedRegisterList.length > 0) && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleSessionAction(session.id, {
+                              action: "update-meta",
+                              absentInstruments: "",
+                            })
+                          }
+                          className="type-kicker text-[10px] text-[var(--accent)] underline cursor-pointer"
+                        >
+                          REGISTER-SPERREN AUFHEBEN
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex flex-wrap gap-1.5">
+                      {BIGBAND_REGISTER_FAMILIES.map((reg) => {
+                        const isUnderstaffed =
+                          session.absentInstrumentList.some(
+                            (r) => r.toLowerCase() === reg.toLowerCase()
+                          ) ||
+                          session.understaffedRegisterList.some(
+                            (r) => r.toLowerCase() === reg.toLowerCase()
+                          );
+                        return (
+                          <button
+                            key={reg}
+                            type="button"
+                            onClick={() =>
+                              toggleAbsentInstrumentInSession(session, reg)
+                            }
+                            className={`type-kicker border px-2.5 py-1 text-[10px] cursor-pointer ${
+                              isUnderstaffed
+                                ? "border-[var(--accent)] bg-[var(--accent)] font-bold text-[var(--accent-ink)]"
+                                : "border-[var(--rule-border)] bg-[var(--bg-surface)] text-[var(--ink-secondary)] hover:border-[var(--ink-primary)]"
+                            }`}
+                          >
+                            {isUnderstaffed ? "✕ UNTERBESETZT: " : "🎺 "}
+                            {reg}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="mt-1.5 text-[11px] text-[var(--ink-secondary)]">
+                      Stücke, deren Probebedarf hauptsächlich bei einem
+                      abwesenden/unterbesetzten Register (z. B. Saxophon) liegt,
+                      werden für diese Probe automatisch zurückgestellt.
+                    </p>
                   </div>
                 </div>
 
@@ -1011,218 +1466,611 @@ export default function ProbeplanTab({
                     </div>
                   ) : (
                     <div className="divide-y divide-[var(--rule-border)] border border-[var(--rule-border)] bg-[var(--bg-paper)]">
-                      {session.pieces.map((sp, idx) => {
-                        const logKey = `${session.id}_${sp.pieceId}`;
-                        const isLogOpen = openLogKey === logKey;
-                        const pieceLogs = session.logs.filter(
-                          (l) => l.pieceId === sp.pieceId
+                      {(() => {
+                        let cumulativeMinutes = 0;
+                        const clampedBreakIndex = Math.max(
+                          1,
+                          Math.min(
+                            session.pieces.length,
+                            session.breakAfterPieceIndex || 3
+                          )
                         );
-                        const mySessionLog = currentUser
-                          ? pieceLogs.find((l) => l.userId === currentUser.id)
-                          : null;
 
-                        return (
-                          <div key={sp.id} className="p-3.5">
-                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                              <div className="flex items-start gap-3">
-                                {/* Reorder Controls */}
-                                <div className="flex flex-col items-center border border-[var(--rule-border)] bg-[var(--bg-surface)] px-1.5 py-1">
-                                  <button
-                                    type="button"
-                                    disabled={idx === 0}
-                                    onClick={() =>
-                                      handleMovePiece(session, idx, "up")
-                                    }
-                                    className="text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] disabled:opacity-25 cursor-pointer"
-                                    title="Nach oben"
-                                  >
-                                    <ArrowUp className="h-3.5 w-3.5" />
-                                  </button>
-                                  <span className="font-mono-tabular text-xs font-bold text-[var(--ink-primary)]">
-                                    {String(idx + 1).padStart(2, "0")}
-                                  </span>
-                                  <button
-                                    type="button"
-                                    disabled={
-                                      idx === session.pieces.length - 1
-                                    }
-                                    onClick={() =>
-                                      handleMovePiece(session, idx, "down")
-                                    }
-                                    className="text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] disabled:opacity-25 cursor-pointer"
-                                    title="Nach unten"
-                                  >
-                                    <ArrowDown className="h-3.5 w-3.5" />
-                                  </button>
-                                </div>
+                        return session.pieces.map((sp, idx) => {
+                          const pieceStartOffset = cumulativeMinutes;
+                          const pieceEndOffset =
+                            pieceStartOffset + sp.effectiveMinutes;
+                          cumulativeMinutes = pieceEndOffset;
 
-                                <div>
-                                  <div className="flex flex-wrap items-baseline gap-2">
-                                    <h4 className="type-piece-h3 text-[var(--ink-primary)]">
-                                      {sp.piece.title}
-                                    </h4>
-                                    {sp.piece.folderNumber && (
-                                      <span className="type-kicker border border-[var(--ink-primary)] bg-[var(--ink-primary)] px-1.5 py-0.5 text-[var(--bg-surface)]">
-                                        MAPPE NR. {sp.piece.folderNumber}
-                                      </span>
-                                    )}
-                                    {sp.piece.artist && (
-                                      <span className="text-xs text-[var(--ink-secondary)]">
-                                        — {sp.piece.artist}
-                                      </span>
-                                    )}
-                                    {sp.isManualOverride && (
-                                      <span className="type-kicker border border-[var(--rule-border)] bg-[var(--bg-surface)] px-1.5 py-0.5 text-[var(--ink-secondary)]">
-                                        MANUELL
-                                      </span>
-                                    )}
-                                    {!sp.eligible && sp.ineligibleReason && (
-                                      <span className="type-kicker inline-flex items-center gap-1 bg-[var(--accent)] px-2 py-0.5 text-[var(--accent-ink)]">
-                                        <AlertTriangle className="h-3 w-3" />
-                                        {sp.ineligibleReason}
-                                      </span>
-                                    )}
-                                  </div>
+                          const shouldRenderBreakAfter =
+                            session.hasBreak && idx + 1 === clampedBreakIndex;
+                          const breakStartOffset = cumulativeMinutes;
+                          const breakEndOffset =
+                            breakStartOffset +
+                            (session.breakDurationMinutes || 15);
+                          if (shouldRenderBreakAfter) {
+                            cumulativeMinutes = breakEndOffset;
+                          }
 
-                                  <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-[var(--ink-secondary)]">
-                                    {sp.piece.singers && (
-                                      <span>
-                                        Sänger:{" "}
-                                        <strong className="text-[var(--ink-primary)]">
-                                          {sp.piece.singers}
-                                        </strong>
-                                      </span>
-                                    )}
-                                    {sp.piece.soloists && (
-                                      <span>
-                                        Solist:{" "}
-                                        <strong className="text-[var(--ink-primary)]">
-                                          {sp.piece.soloists}
-                                        </strong>
-                                      </span>
-                                    )}
-                                    <span className="font-mono-tabular text-[var(--ink-muted)]">
-                                      [{sp.piece.priorityReasons.join(" • ")}]
-                                    </span>
-                                  </div>
+                          const logKey = `${session.id}_${sp.pieceId}`;
+                          const isLogOpen = openLogKey === logKey;
+                          const bpmKey = `${session.id}_${sp.pieceId}`;
+                          const isBpmOpen = openBpmKey === bpmKey;
+                          const pieceLogs = session.logs.filter(
+                            (l) => l.pieceId === sp.pieceId
+                          );
+                          const mySessionLog = currentUser
+                            ? pieceLogs.find(
+                                (l) => l.userId === currentUser.id
+                              )
+                            : null;
 
-                                  {pieceLogs.length > 0 && (
-                                    <div className="mt-2 flex flex-wrap gap-1.5">
-                                      {pieceLogs.map((l) => (
-                                        <span
-                                          key={l.id}
-                                          className="font-mono-tabular inline-flex items-center gap-1 border border-[var(--ink-primary)] bg-[var(--bg-surface)] px-2 py-0.5 text-[11px] text-[var(--ink-primary)]"
-                                        >
-                                          <Check className="h-3 w-3" />
-                                          {l.userName}: Schwierigkeit{" "}
-                                          {l.prevConfidence}→{l.newConfidence},
-                                          Übung {l.prevPracticeNeeded}→
-                                          {l.newPracticeNeeded}
-                                        </span>
-                                      ))}
+                          return (
+                            <React.Fragment key={sp.id}>
+                              <div className="p-3.5">
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                  <div className="flex items-start gap-3 min-w-0 flex-1">
+                                    {/* Reorder Controls */}
+                                    <div className="flex flex-col items-center border border-[var(--rule-border)] bg-[var(--bg-surface)] px-1.5 py-1">
+                                      <button
+                                        type="button"
+                                        disabled={idx === 0}
+                                        onClick={() =>
+                                          handleMovePiece(session, idx, "up")
+                                        }
+                                        className="text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] disabled:opacity-25 cursor-pointer"
+                                        title="Nach oben"
+                                      >
+                                        <ArrowUp className="h-3.5 w-3.5" />
+                                      </button>
+                                      <span className="font-mono-tabular text-xs font-bold text-[var(--ink-primary)]">
+                                        {String(idx + 1).padStart(2, "0")}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        disabled={
+                                          idx === session.pieces.length - 1
+                                        }
+                                        onClick={() =>
+                                          handleMovePiece(session, idx, "down")
+                                        }
+                                        className="text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] disabled:opacity-25 cursor-pointer"
+                                        title="Nach unten"
+                                      >
+                                        <ArrowDown className="h-3.5 w-3.5" />
+                                      </button>
                                     </div>
-                                  )}
-                                </div>
-                              </div>
 
-                              {/* Right Actions: Log & Delete */}
-                              <div className="flex items-center gap-1.5 self-end sm:self-center">
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    openLogDrawer(session.id, sp.pieceId)
-                                  }
-                                  className={`type-kicker ui-transition inline-flex items-center gap-1.5 border px-3 py-1.5 cursor-pointer ${
-                                    mySessionLog
-                                      ? "border-[var(--ink-primary)] bg-[var(--bg-recessed)] text-[var(--ink-primary)]"
-                                      : "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-ink)]"
-                                  }`}
-                                >
-                                  <CheckCircle2 className="h-3.5 w-3.5" />
-                                  {mySessionLog
-                                    ? "LOG ANPASSEN"
-                                    : "PROBEN-LOG"}
-                                </button>
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex flex-wrap items-baseline gap-2">
+                                        <h4 className="type-piece-h3 text-[var(--ink-primary)]">
+                                          {sp.piece.title}
+                                        </h4>
+                                        {sp.piece.folderNumber && (
+                                          <span className="type-kicker border border-[var(--ink-primary)] bg-[var(--ink-primary)] px-1.5 py-0.5 text-[var(--bg-surface)]">
+                                            MAPPE NR. {sp.piece.folderNumber}
+                                          </span>
+                                        )}
+                                        {sp.piece.artist && (
+                                          <span className="text-xs text-[var(--ink-secondary)]">
+                                            — {sp.piece.artist}
+                                          </span>
+                                        )}
+                                        {sp.isManualOverride && (
+                                          <span className="type-kicker border border-[var(--rule-border)] bg-[var(--bg-surface)] px-1.5 py-0.5 text-[var(--ink-secondary)]">
+                                            MANUELL
+                                          </span>
+                                        )}
+                                        {!sp.eligible &&
+                                          sp.ineligibleReason && (
+                                            <span className="type-kicker inline-flex items-center gap-1 bg-[var(--accent)] px-2 py-0.5 text-[var(--accent-ink)]">
+                                              <AlertTriangle className="h-3 w-3" />
+                                              {sp.ineligibleReason}
+                                            </span>
+                                          )}
+                                      </div>
 
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleSessionAction(session.id, {
-                                      action: "remove-piece",
-                                      pieceId: sp.pieceId,
-                                    })
-                                  }
-                                  className="border border-[var(--rule-border)] bg-[var(--bg-surface)] p-1.5 text-[var(--ink-secondary)] hover:border-[var(--accent)] hover:text-[var(--accent)] cursor-pointer"
-                                  title="Stück aus Probe entfernen"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </button>
-                              </div>
-                            </div>
+                                      {/* Estimated Duration & Per-Session BPM Row */}
+                                      <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                                        {/* Estimated Minutes + -5 / +5 Controls */}
+                                        <div className="font-mono-tabular inline-flex items-center border border-[var(--ink-primary)] bg-[var(--bg-surface)] text-[11px]">
+                                          <button
+                                            type="button"
+                                            title="5 Minuten kürzer"
+                                            onClick={() =>
+                                              handleSessionAction(session.id, {
+                                                action: "update-piece-duration",
+                                                pieceId: sp.pieceId,
+                                                estimatedMinutes: Math.max(
+                                                  5,
+                                                  sp.effectiveMinutes - 5
+                                                ),
+                                              })
+                                            }
+                                            className="border-r border-[var(--rule-border)] px-1.5 py-0.5 font-bold text-[var(--ink-secondary)] hover:bg-[var(--bg-recessed)] hover:text-[var(--ink-primary)] cursor-pointer"
+                                          >
+                                            -5
+                                          </button>
+                                          <span className="px-2 py-0.5 font-semibold text-[var(--ink-primary)]">
+                                            ⏱ ~{sp.effectiveMinutes} Min.
+                                            {session.scheduledDate
+                                              ? ` (${formatClockTime(
+                                                  session.scheduledDate,
+                                                  pieceStartOffset
+                                                )}–${formatClockTime(
+                                                  session.scheduledDate,
+                                                  pieceEndOffset
+                                                )})`
+                                              : ""}
+                                          </span>
+                                          <button
+                                            type="button"
+                                            title="5 Minuten länger"
+                                            onClick={() =>
+                                              handleSessionAction(session.id, {
+                                                action: "update-piece-duration",
+                                                pieceId: sp.pieceId,
+                                                estimatedMinutes: Math.min(
+                                                  60,
+                                                  sp.effectiveMinutes + 5
+                                                ),
+                                              })
+                                            }
+                                            className="border-l border-[var(--rule-border)] px-1.5 py-0.5 font-bold text-[var(--ink-secondary)] hover:bg-[var(--bg-recessed)] hover:text-[var(--ink-primary)] cursor-pointer"
+                                          >
+                                            +5
+                                          </button>
+                                        </div>
 
-                            {/* Exact Player Log Drawer */}
-                            {isLogOpen && (
-                              <div className="mt-3 border-2 border-[var(--ink-primary)] bg-[var(--bg-surface)] p-4">
-                                <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-                                  <span className="type-kicker text-[var(--accent)]">
-                                    SPIELER-PROTOKOLL FÜR „{sp.piece.title}“ (
-                                    {currentUser?.name})
-                                  </span>
-                                  <span className="font-mono-tabular text-[11px] text-[var(--ink-muted)]">
-                                    Aktualisiert deine Repertoire-Werte
-                                  </span>
-                                </div>
+                                        {/* Target BPM & Last Session BPM & Current Session BPM Trigger */}
+                                        {sp.piece.bpm > 0 && (
+                                          <span className="font-mono-tabular border border-[var(--rule-border)] bg-[var(--bg-surface)] px-2 py-0.5 text-[11px] font-semibold text-[var(--ink-primary)]">
+                                            ♩ Ziel: {sp.piece.bpm} BPM
+                                          </span>
+                                        )}
+                                        {sp.lastSessionBpm &&
+                                          sp.lastSessionBpm > 0 && (
+                                            <span className="font-mono-tabular border border-[var(--rule-border)] bg-[var(--bg-surface)] px-2 py-0.5 text-[11px] text-[var(--ink-secondary)]">
+                                              Letzte Probe: {sp.lastSessionBpm}{" "}
+                                              BPM
+                                              {sp.lastSessionBpmComment
+                                                ? ` (${sp.lastSessionBpmComment})`
+                                                : ""}
+                                            </span>
+                                          )}
 
-                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                  <ScoreSelector
-                                    label="Schwierigkeit (1 = leicht, 5 = sehr schwer)"
-                                    value={logConfidence}
-                                    onChange={setLogConfidence}
-                                  />
-                                  <ScoreSelector
-                                    label="Neuer Übungsbedarf (1 = gering, 5 = hoch)"
-                                    value={logPractice}
-                                    onChange={setLogPractice}
-                                  />
-                                </div>
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            openBpmEditor(
+                                              session.id,
+                                              sp.pieceId,
+                                              sp.sessionBpm,
+                                              sp.lastSessionBpm,
+                                              sp.piece.bpm,
+                                              sp.sessionBpmComment
+                                            )
+                                          }
+                                          className={`font-mono-tabular inline-flex items-center gap-1 border px-2 py-0.5 text-[11px] cursor-pointer ${
+                                            sp.sessionBpm > 0 ||
+                                            sp.sessionBpmComment
+                                              ? "border-[var(--accent)] bg-[var(--bg-surface)] font-bold text-[var(--accent)]"
+                                              : "border-[var(--ink-primary)] bg-[var(--bg-recessed)] font-semibold text-[var(--ink-primary)]"
+                                          }`}
+                                        >
+                                          <span>
+                                            ♩{" "}
+                                            {sp.sessionBpm > 0
+                                              ? `Proben-Tempo: ${sp.sessionBpm} BPM`
+                                              : "+ Proben-Tempo (BPM)"}
+                                            {sp.sessionBpmComment
+                                              ? ` · „${sp.sessionBpmComment}“`
+                                              : ""}
+                                          </span>
+                                        </button>
+                                      </div>
 
-                                <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
-                                  <input
-                                    type="text"
-                                    value={logComment}
-                                    onChange={(e) =>
-                                      setLogComment(e.target.value)
-                                    }
-                                    placeholder="Optionale Anmerkung zur Probe (z.B. Tempo, Intonation, Solo-Übergang)..."
-                                    className="flex-1 border border-[var(--rule-border)] bg-[var(--bg-paper)] px-3 py-2 text-xs text-[var(--ink-primary)] focus:border-[var(--ink-primary)] focus:outline-none"
-                                  />
-                                  <div className="flex items-center gap-2">
+                                      <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs text-[var(--ink-secondary)]">
+                                        {sp.piece.singers && (
+                                          <span>
+                                            Sänger:{" "}
+                                            <strong className="text-[var(--ink-primary)]">
+                                              {sp.piece.singers}
+                                            </strong>
+                                          </span>
+                                        )}
+                                        {sp.piece.soloists && (
+                                          <span>
+                                            Solist:{" "}
+                                            <strong className="text-[var(--ink-primary)]">
+                                              {sp.piece.soloists}
+                                            </strong>
+                                          </span>
+                                        )}
+                                        <span className="font-mono-tabular text-[var(--ink-muted)]">
+                                          [
+                                          {sp.piece.priorityReasons.join(" • ")}
+                                          ]
+                                        </span>
+                                      </div>
+
+                                      {/* Instrument Practice Stats & Measure Notes Summary */}
+                                      {(sp.piece.instrumentStats.length > 0 ||
+                                        sp.piece.measureNotes.length > 0) && (
+                                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                                          {sp.piece.instrumentStats
+                                            .filter(
+                                              (st) =>
+                                                st.avgPracticeNeeded >= 3.5 ||
+                                                st.isFlaggedFocus
+                                            )
+                                            .map((st) => (
+                                              <span
+                                                key={st.instrument}
+                                                className="font-mono-tabular border border-[var(--accent)] bg-[var(--bg-surface)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--accent)]"
+                                              >
+                                                🎺 {st.instrument}:{" "}
+                                                {st.voteCount > 0
+                                                  ? `Ø ${st.avgPracticeNeeded.toFixed(
+                                                      1
+                                                    )}`
+                                                  : "Fokus"}
+                                              </span>
+                                            ))}
+                                          {sp.piece.measureNotes.map((mn) => (
+                                            <span
+                                              key={mn.id}
+                                              className="border border-[var(--rule-border)] bg-[var(--bg-surface)] px-2 py-0.5 text-[10px] text-[var(--ink-primary)]"
+                                            >
+                                              📌{" "}
+                                              <strong>{mn.measure}</strong>
+                                              {mn.instrument
+                                                ? ` (${mn.instrument})`
+                                                : ""}
+                                              : {mn.note}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      )}
+
+                                      {pieceLogs.length > 0 && (
+                                        <div className="mt-2 flex flex-wrap gap-1.5">
+                                          {pieceLogs.map((l) => (
+                                            <span
+                                              key={l.id}
+                                              className="font-mono-tabular inline-flex items-center gap-1 border border-[var(--ink-primary)] bg-[var(--bg-surface)] px-2 py-0.5 text-[11px] text-[var(--ink-primary)]"
+                                            >
+                                              <Check className="h-3 w-3" />
+                                              {l.userName}: Schwierigkeit{" "}
+                                              {l.prevConfidence}→
+                                              {l.newConfidence}, Übung{" "}
+                                              {l.prevPracticeNeeded}→
+                                              {l.newPracticeNeeded}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Right Actions: Music Stand Jump, Log & Delete */}
+                                  <div className="flex items-center gap-1.5 self-end sm:self-center shrink-0">
                                     <button
                                       type="button"
-                                      onClick={() => setOpenLogKey(null)}
-                                      className="type-kicker border border-[var(--rule-border)] bg-[var(--bg-paper)] px-3 py-2 text-[var(--ink-secondary)] cursor-pointer"
+                                      onClick={() => {
+                                        setMusicStandInitialIndex(idx);
+                                        setMusicStandSessionId(session.id);
+                                      }}
+                                      title="Dieses Stück im Notenpult-Modus öffnen"
+                                      className="type-kicker border border-[var(--ink-primary)] bg-[var(--bg-surface)] px-2 py-1.5 text-[10px] font-bold text-[var(--ink-primary)] hover:bg-[var(--ink-primary)] hover:text-[var(--bg-surface)] cursor-pointer"
                                     >
-                                      ABBRECHEN
+                                      🎼 PULT
                                     </button>
+
                                     <button
                                       type="button"
-                                      disabled={submittingLog}
                                       onClick={() =>
-                                        submitPlayerLog(session.id, sp.pieceId)
+                                        openLogDrawer(session.id, sp.pieceId)
                                       }
-                                      className="type-kicker bg-[var(--accent)] px-4 py-2 text-[var(--accent-ink)] cursor-pointer"
+                                      className={`type-kicker ui-transition inline-flex items-center gap-1.5 border px-3 py-1.5 cursor-pointer ${
+                                        mySessionLog
+                                          ? "border-[var(--ink-primary)] bg-[var(--bg-recessed)] text-[var(--ink-primary)]"
+                                          : "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-ink)]"
+                                      }`}
                                     >
-                                      {submittingLog
-                                        ? "SPEICHERT..."
-                                        : "LOG SPEICHERN"}
+                                      <CheckCircle2 className="h-3.5 w-3.5" />
+                                      {mySessionLog
+                                        ? "LOG ANPASSEN"
+                                        : "PROBEN-LOG"}
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleSessionAction(session.id, {
+                                          action: "remove-piece",
+                                          pieceId: sp.pieceId,
+                                        })
+                                      }
+                                      className="border border-[var(--rule-border)] bg-[var(--bg-surface)] p-1.5 text-[var(--ink-secondary)] hover:border-[var(--accent)] hover:text-[var(--accent)] cursor-pointer"
+                                      title="Stück aus Probe entfernen"
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
                                     </button>
                                   </div>
                                 </div>
+
+                                {/* Inline Collapsible Per-Session BPM & Comment Bar */}
+                                {isBpmOpen && (
+                                  <div className="mt-3 border-2 border-[var(--ink-primary)] bg-[var(--bg-surface)] p-3">
+                                    <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                                      <span className="type-kicker text-[var(--accent)]">
+                                        ♩ PROBEN-TEMPO (BPM) & KOMMENTAR FÜR „
+                                        {sp.piece.title}“
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() => setOpenBpmKey(null)}
+                                        className="type-kicker text-[10px] text-[var(--ink-secondary)] underline cursor-pointer"
+                                      >
+                                        SCHLIESSEN
+                                      </button>
+                                    </div>
+                                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-12 sm:items-center">
+                                      <div className="flex items-center gap-1 sm:col-span-4">
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            const cur =
+                                              Number(bpmDraftVal) ||
+                                              sp.piece.bpm ||
+                                              120;
+                                            const next = Math.max(30, cur - 5);
+                                            handleSavePieceBpm(
+                                              session.id,
+                                              sp.pieceId,
+                                              next
+                                            );
+                                          }}
+                                          className="font-mono-tabular border border-[var(--ink-primary)] bg-[var(--bg-paper)] px-2.5 py-1.5 text-xs font-bold cursor-pointer"
+                                        >
+                                          -5
+                                        </button>
+                                        <input
+                                          type="number"
+                                          min={0}
+                                          max={400}
+                                          value={bpmDraftVal}
+                                          onChange={(e) =>
+                                            setBpmDraftVal(e.target.value)
+                                          }
+                                          placeholder="BPM (z.B. 160)"
+                                          className="font-mono-tabular w-full border border-[var(--ink-primary)] bg-[var(--bg-paper)] px-2.5 py-1.5 text-center text-xs font-bold"
+                                        />
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            const cur =
+                                              Number(bpmDraftVal) ||
+                                              sp.piece.bpm ||
+                                              120;
+                                            const next = Math.min(400, cur + 5);
+                                            handleSavePieceBpm(
+                                              session.id,
+                                              sp.pieceId,
+                                              next
+                                            );
+                                          }}
+                                          className="font-mono-tabular border border-[var(--ink-primary)] bg-[var(--bg-paper)] px-2.5 py-1.5 text-xs font-bold cursor-pointer"
+                                        >
+                                          +5
+                                        </button>
+                                      </div>
+
+                                      <div className="sm:col-span-6">
+                                        <input
+                                          type="text"
+                                          value={bpmCommentDraftVal}
+                                          onChange={(e) =>
+                                            setBpmCommentDraftVal(
+                                              e.target.value
+                                            )
+                                          }
+                                          placeholder="Tempo-Kommentar (z.B. „160 BPM, nächstes Mal schneller versuchen“)..."
+                                          className="w-full border border-[var(--rule-border)] bg-[var(--bg-paper)] px-2.5 py-1.5 text-xs text-[var(--ink-primary)]"
+                                        />
+                                      </div>
+
+                                      <div className="sm:col-span-2">
+                                        <button
+                                          type="button"
+                                          disabled={savingBpmKey === bpmKey}
+                                          onClick={() =>
+                                            handleSavePieceBpm(
+                                              session.id,
+                                              sp.pieceId
+                                            )
+                                          }
+                                          className="type-kicker w-full bg-[var(--accent)] px-3 py-1.5 text-center text-[10px] font-bold text-[var(--accent-ink)] cursor-pointer"
+                                        >
+                                          {savingBpmKey === bpmKey
+                                            ? "..."
+                                            : "SPEICHERN"}
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Exact Player Log Drawer */}
+                                {isLogOpen && (
+                                  <div className="mt-3 border-2 border-[var(--ink-primary)] bg-[var(--bg-surface)] p-4">
+                                    <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+                                      <span className="type-kicker text-[var(--accent)]">
+                                        SPIELER-PROTOKOLL FÜR „{sp.piece.title}“
+                                        ({currentUser?.name})
+                                      </span>
+                                      <span className="font-mono-tabular text-[11px] text-[var(--ink-muted)]">
+                                        Aktualisiert deine Repertoire-Werte
+                                      </span>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                      <ScoreSelector
+                                        label="Schwierigkeit (1 = leicht, 5 = sehr schwer)"
+                                        value={logConfidence}
+                                        onChange={setLogConfidence}
+                                      />
+                                      <ScoreSelector
+                                        label="Neuer Übungsbedarf (1 = gering, 5 = hoch)"
+                                        value={logPractice}
+                                        onChange={setLogPractice}
+                                      />
+                                    </div>
+
+                                    <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+                                      <input
+                                        type="text"
+                                        value={logComment}
+                                        onChange={(e) =>
+                                          setLogComment(e.target.value)
+                                        }
+                                        placeholder="Optionale Anmerkung zur Probe (z.B. Tempo, Intonation, Solo-Übergang)..."
+                                        className="flex-1 border border-[var(--rule-border)] bg-[var(--bg-paper)] px-3 py-2 text-xs text-[var(--ink-primary)] focus:border-[var(--ink-primary)] focus:outline-none"
+                                      />
+                                      <div className="flex items-center gap-2">
+                                        <button
+                                          type="button"
+                                          onClick={() => setOpenLogKey(null)}
+                                          className="type-kicker border border-[var(--rule-border)] bg-[var(--bg-paper)] px-3 py-2 text-[var(--ink-secondary)] cursor-pointer"
+                                        >
+                                          ABBRECHEN
+                                        </button>
+                                        <button
+                                          type="button"
+                                          disabled={submittingLog}
+                                          onClick={() =>
+                                            submitPlayerLog(
+                                              session.id,
+                                              sp.pieceId
+                                            )
+                                          }
+                                          className="type-kicker bg-[var(--accent)] px-4 py-2 text-[var(--accent-ink)] cursor-pointer"
+                                        >
+                                          {submittingLog
+                                            ? "SPEICHERT..."
+                                            : "LOG SPEICHERN"}
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
-                            )}
-                          </div>
-                        );
-                      })}
+
+                              {/* Optional Session Break Banner after breakAfterPieceIndex */}
+                              {shouldRenderBreakAfter && (
+                                <div className="flex flex-wrap items-center justify-between gap-2 border-y-2 border-[var(--ink-primary)] bg-[var(--bg-recessed)] px-4 py-2.5">
+                                  <div className="font-mono-tabular flex flex-wrap items-center gap-2 text-xs font-bold text-[var(--ink-primary)]">
+                                    <span>
+                                      ☕ PAUSE ·{" "}
+                                      {session.breakDurationMinutes || 15} MIN.
+                                    </span>
+                                    {session.scheduledDate && (
+                                      <span className="text-[11px] font-normal text-[var(--ink-secondary)]">
+                                        (
+                                        {formatClockTime(
+                                          session.scheduledDate,
+                                          breakStartOffset
+                                        )}
+                                        –
+                                        {formatClockTime(
+                                          session.scheduledDate,
+                                          breakEndOffset
+                                        )}{" "}
+                                        Uhr)
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <div className="flex flex-wrap items-center gap-1.5">
+                                    {[10, 15, 20, 30].map((mins) => (
+                                      <button
+                                        key={mins}
+                                        type="button"
+                                        onClick={() =>
+                                          handleSessionAction(session.id, {
+                                            action: "update-break",
+                                            hasBreak: true,
+                                            breakDurationMinutes: mins,
+                                          })
+                                        }
+                                        className={`font-mono-tabular border px-2 py-0.5 text-[10px] cursor-pointer ${
+                                          (session.breakDurationMinutes ||
+                                            15) === mins
+                                            ? "border-[var(--ink-primary)] bg-[var(--ink-primary)] font-bold text-[var(--bg-surface)]"
+                                            : "border-[var(--rule-border)] bg-[var(--bg-surface)] text-[var(--ink-primary)]"
+                                        }`}
+                                      >
+                                        {mins}m
+                                      </button>
+                                    ))}
+
+                                    <button
+                                      type="button"
+                                      disabled={clampedBreakIndex <= 1}
+                                      onClick={() =>
+                                        handleSessionAction(session.id, {
+                                          action: "update-break",
+                                          hasBreak: true,
+                                          breakAfterPieceIndex: Math.max(
+                                            1,
+                                            clampedBreakIndex - 1
+                                          ),
+                                        })
+                                      }
+                                      className="type-kicker border border-[var(--rule-border)] bg-[var(--bg-surface)] px-2 py-0.5 text-[10px] text-[var(--ink-primary)] disabled:opacity-35 cursor-pointer"
+                                    >
+                                      ▲ Früher
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={
+                                        clampedBreakIndex >=
+                                        session.pieces.length
+                                      }
+                                      onClick={() =>
+                                        handleSessionAction(session.id, {
+                                          action: "update-break",
+                                          hasBreak: true,
+                                          breakAfterPieceIndex: Math.min(
+                                            session.pieces.length,
+                                            clampedBreakIndex + 1
+                                          ),
+                                        })
+                                      }
+                                      className="type-kicker border border-[var(--rule-border)] bg-[var(--bg-surface)] px-2 py-0.5 text-[10px] text-[var(--ink-primary)] disabled:opacity-35 cursor-pointer"
+                                    >
+                                      ▼ Später
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleSessionAction(session.id, {
+                                          action: "update-break",
+                                          hasBreak: false,
+                                        })
+                                      }
+                                      className="type-kicker border border-[var(--accent)] bg-[var(--bg-surface)] px-2 py-0.5 text-[10px] font-bold text-[var(--accent)] cursor-pointer"
+                                    >
+                                      ✕ Entfernen
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </React.Fragment>
+                          );
+                        });
+                      })()}
                     </div>
                   )}
 
@@ -1540,6 +2388,28 @@ export default function ProbeplanTab({
       <SessionQrModal
         session={qrModalSession}
         onClose={() => setQrModalSession(null)}
+      />
+
+      {/* Modal: Konzertmeister Sync (Attendance & Schedule) */}
+      <KonzertmeisterSyncModal
+        isOpen={showKmModal}
+        onClose={() => setShowKmModal(false)}
+        sessions={sessions}
+        defaultSessionId={kmDefaultSessionId}
+        onSuccess={onRefresh}
+      />
+
+      {/* Modal: Live Music Stand Mode (100dvh High-Contrast Rehearsal View) */}
+      <MusicStandModal
+        session={
+          musicStandSessionId
+            ? sessions.find((s) => s.id === musicStandSessionId) || null
+            : null
+        }
+        initialPieceIndex={musicStandInitialIndex}
+        currentUser={currentUser}
+        onClose={() => setMusicStandSessionId(null)}
+        onRefresh={onRefresh}
       />
     </div>
   );

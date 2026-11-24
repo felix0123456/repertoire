@@ -24,6 +24,11 @@ export async function PATCH(
     if (typeof body.additionalInfo === "string") {
       data.additionalInfo = body.additionalInfo.trim();
     }
+    if (Array.isArray(body.setlist)) {
+      data.setlistJson = JSON.stringify(body.setlist);
+    } else if (typeof body.setlistJson === "string") {
+      data.setlistJson = body.setlistJson;
+    }
 
     const updated = await prisma.concertEvent.update({
       where: { id },
@@ -58,4 +63,3 @@ export async function DELETE(
     );
   }
 }
-

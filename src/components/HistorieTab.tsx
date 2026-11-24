@@ -175,11 +175,31 @@ export default function HistorieTab({
                       {s.title}
                     </h3>
                   </div>
-                  <div className="font-mono-tabular mt-1 text-xs text-[var(--ink-secondary)]">
-                    ABGESCHLOSSEN AM:{" "}
-                    {s.completedAt
-                      ? new Date(s.completedAt).toLocaleDateString("de-DE")
-                      : "—"}
+                  <div className="font-mono-tabular mt-1 flex flex-wrap items-center gap-3 text-xs text-[var(--ink-secondary)]">
+                    <span>
+                      ABGESCHLOSSEN AM:{" "}
+                      {s.completedAt
+                        ? new Date(s.completedAt).toLocaleDateString("de-DE")
+                        : "—"}
+                    </span>
+                    {s.attendance && s.attendance.length > 0 && (
+                      <span>
+                        • KONZERTMEISTER: ✓{" "}
+                        {
+                          s.attendance.filter((a) => a.status === "PRESENT")
+                            .length
+                        }{" "}
+                        Zugesagt · ✗{" "}
+                        {
+                          s.attendance.filter((a) => a.status === "ABSENT")
+                            .length
+                        }{" "}
+                        Abgesagt
+                      </span>
+                    )}
+                    {s.totalEstimatedMinutes > 0 && (
+                      <span>• ⏱ ~{s.totalEstimatedMinutes} Min.</span>
+                    )}
                   </div>
                 </div>
 
@@ -222,19 +242,41 @@ export default function HistorieTab({
 
               <div className="mt-4">
                 <div className="type-kicker text-[var(--ink-muted)]">
-                  GEPROBTE STÜCKE ({s.pieces.length})
+                  GEPROBTE STÜCKE & PROBEN-TEMPO ({s.pieces.length})
                 </div>
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
                   {s.pieces.map((sp, i) => (
-                    <span
+                    <div
                       key={sp.id}
-                      className="border border-[var(--rule-border)] bg-[var(--bg-paper)] px-2.5 py-1 text-xs text-[var(--ink-primary)]"
+                      className="border border-[var(--rule-border)] bg-[var(--bg-paper)] px-2.5 py-1.5 text-xs text-[var(--ink-primary)]"
                     >
-                      <strong className="font-mono-tabular">
-                        {String(i + 1).padStart(2, "0")}.
-                      </strong>{" "}
-                      {sp.piece.title}
-                    </span>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <strong className="font-mono-tabular">
+                          {String(i + 1).padStart(2, "0")}.
+                        </strong>
+                        {sp.piece.folderNumber && (
+                          <span className="font-mono-tabular border border-[var(--ink-primary)] bg-[var(--bg-surface)] px-1 py-0.5 text-[10px] font-bold">
+                            #{sp.piece.folderNumber}
+                          </span>
+                        )}
+                        <span className="font-semibold">{sp.piece.title}</span>
+                        {sp.piece.bpm > 0 && (
+                          <span className="font-mono-tabular text-[11px] text-[var(--ink-secondary)]">
+                            (♩ Ziel: {sp.piece.bpm} BPM)
+                          </span>
+                        )}
+                        {sp.sessionBpm > 0 && (
+                          <span className="font-mono-tabular border border-[var(--accent)] bg-[var(--bg-surface)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--accent)]">
+                            ♩ Proben-Tempo: {sp.sessionBpm} BPM
+                          </span>
+                        )}
+                      </div>
+                      {sp.sessionBpmComment && (
+                        <div className="mt-0.5 text-[11px] italic text-[var(--ink-secondary)]">
+                          Tempo-Notiz: „{sp.sessionBpmComment}“
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </div>
               </div>

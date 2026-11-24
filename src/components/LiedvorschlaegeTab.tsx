@@ -133,6 +133,9 @@ export default function LiedvorschlaegeTab({
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [showVideoEmbed, setShowVideoEmbed] = useState<boolean>(false);
   const [playerReloadKey, setPlayerReloadKey] = useState<number>(0);
+  const [activeStartOffset, setActiveStartOffset] = useState<number | null>(
+    null
+  );
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const ytIframeRef = useRef<HTMLIFrameElement | null>(null);
 
@@ -180,6 +183,9 @@ export default function LiedvorschlaegeTab({
   const [draftAutoVote, setDraftAutoVote] = useState<"SUPER" | "YES" | "NONE">(
     "YES"
   );
+  const [draftAlreadyExists, setDraftAlreadyExists] = useState<boolean>(false);
+  const [draftAlreadyInRepertoire, setDraftAlreadyInRepertoire] =
+    useState<boolean>(false);
   const [savingProposal, setSavingProposal] = useState<boolean>(false);
 
   // Edit Existing Proposal Modal State
@@ -353,9 +359,11 @@ export default function LiedvorschlaegeTab({
   useEffect(() => {
     if (!activeCard) {
       setCardComment("");
+      setActiveStartOffset(null);
       return;
     }
     setCardComment(activeCard.myVote?.comment || "");
+    setActiveStartOffset(null);
     setDragOffset({ x: 0, y: 0 });
     setExitDirection(null);
   }, [activeCard?.id]);
@@ -445,14 +453,18 @@ export default function LiedvorschlaegeTab({
     subTab,
   ]);
 
-  const handleRestartFromStartSeconds = () => {
+  const handleJumpToSeconds = (sec: number) => {
     if (!activeCard) return;
+    setActiveStartOffset(sec);
     setIsPlaying(true);
     if (activeCard.previewAudioUrl && !showVideoEmbed && audioRef.current) {
-      audioRef.current.currentTime = Math.min(
-        25,
-        Math.max(0, activeCard.startSeconds || 0)
-      );
+      const hasFiniteDuration =
+        Number.isFinite(audioRef.current.duration) &&
+        audioRef.current.duration > 2;
+      const targetTime = hasFiniteDuration
+        ? Math.min(audioRef.current.duration - 1, Math.max(0, sec))
+        : Math.max(0, sec);
+      audioRef.current.currentTime = targetTime;
       audioRef.current.play().catch(() => {});
     } else if (
       activeCard.platform === "YOUTUBE" &&
@@ -462,7 +474,7 @@ export default function LiedvorschlaegeTab({
         JSON.stringify({
           event: "command",
           func: "seekTo",
-          args: [activeCard.startSeconds || 0, true],
+          args: [sec, true],
         }),
         "*"
       );
@@ -473,6 +485,11 @@ export default function LiedvorschlaegeTab({
     } else {
       setPlayerReloadKey((k) => k + 1);
     }
+  };
+
+  const handleRestartFromStartSeconds = () => {
+    if (!activeCard) return;
+    handleJumpToSeconds(activeCard.startSeconds || 0);
   };
 
   // Cast vote from Swipe Card
@@ -745,6 +762,8 @@ export default function LiedvorschlaegeTab({
     setDraftNotes("");
     setDraftProposedBy(currentUser?.name || "");
     setDraftAutoVote("YES");
+    setDraftAlreadyExists(false);
+    setDraftAlreadyInRepertoire(false);
     setShowAddModal(true);
   };
 
@@ -758,6 +777,8 @@ export default function LiedvorschlaegeTab({
     setDraftThumbnailUrl(track.thumbnailUrl || "");
     setDraftPreviewAudioUrl(track.previewAudioUrl || "");
     setDraftStartTimeStr(formatSecondsToMmSs(track.startSeconds || 0));
+    setDraftAlreadyExists(Boolean(track.alreadyExists));
+    setDraftAlreadyInRepertoire(Boolean(track.alreadyInRepertoire));
   };
 
   const handleResolveUrl = async (overrideUrl?: string) => {
@@ -1068,13 +1089,17 @@ export default function LiedvorschlaegeTab({
     if (!activeCard || activeCard.platform !== "YOUTUBE") return "";
     const vid = activeCard.externalId;
     if (!vid) return activeCard.embedUrl;
+    const effectiveStart =
+      activeStartOffset !== null
+        ? activeStartOffset
+        : activeCard.startSeconds || 0;
     const params = new URLSearchParams({
       enablejsapi: "1",
       autoplay: isPlaying ? "1" : "0",
       mute: isMuted ? "1" : "0",
       playsinline: "1",
       rel: "0",
-      start: String(Math.max(0, activeCard.startSeconds || 0)),
+      start: String(Math.max(0, effectiveStart)),
     });
     return `https://www.youtube.com/embed/${vid}?${params.toString()}`;
   }, [
@@ -1083,6 +1108,7 @@ export default function LiedvorschlaegeTab({
     activeCard?.externalId,
     activeCard?.embedUrl,
     activeCard?.startSeconds,
+    activeStartOffset,
     playerReloadKey,
   ]);
 
@@ -1489,105 +1515,140 @@ export default function LiedvorschlaegeTab({
                   )}
                 </div>
 
-                {/* COMPACT AUDIO / VIDEO PLAYER CONTROL BAR */}
-                <div className="flex flex-wrap items-center justify-between gap-1.5 border-b border-[var(--rule-border)] bg-[var(--bg-recessed)] px-3 py-1.5">
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setIsPlaying((p) => !p)}
-                      className="type-kicker inline-flex items-center gap-1 border border-[var(--ink-primary)] bg-[var(--bg-surface)] px-2.5 py-1 text-[10px] font-bold text-[var(--ink-primary)] cursor-pointer"
-                    >
-                      {isPlaying ? (
-                        <>
-                          <Pause className="h-3 w-3" /> PAUSE
-                        </>
-                      ) : (
-                        <>
-                          <Play className="h-3 w-3" /> PLAY
-                        </>
-                      )}
-                    </button>
+                {/* COMPACT AUDIO / VIDEO PLAYER CONTROL BAR + 30S/60S SNIPPET JUMP BUTTONS */}
+                <div className="space-y-1.5 border-b border-[var(--rule-border)] bg-[var(--bg-recessed)] px-3 py-1.5">
+                  <div className="flex flex-wrap items-center justify-between gap-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setIsPlaying((p) => !p)}
+                        className="type-kicker inline-flex items-center gap-1 border border-[var(--ink-primary)] bg-[var(--bg-surface)] px-2.5 py-1 text-[10px] font-bold text-[var(--ink-primary)] cursor-pointer"
+                      >
+                        {isPlaying ? (
+                          <>
+                            <Pause className="h-3 w-3" /> PAUSE
+                          </>
+                        ) : (
+                          <>
+                            <Play className="h-3 w-3" /> PLAY
+                          </>
+                        )}
+                      </button>
 
-                    <button
-                      type="button"
-                      onClick={() => setIsMuted((m) => !m)}
-                      title={isMuted ? "Ton einschalten" : "Stummschalten"}
-                      className="type-kicker inline-flex items-center gap-1 border border-[var(--rule-border)] bg-[var(--bg-surface)] px-2 py-1 text-[10px] text-[var(--ink-primary)] cursor-pointer"
-                    >
-                      {isMuted ? (
-                        <VolumeX className="h-3 w-3 text-[var(--accent)]" />
-                      ) : (
-                        <Volume2 className="h-3 w-3" />
-                      )}
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsMuted((m) => !m)}
+                        title={isMuted ? "Ton einschalten" : "Stummschalten"}
+                        className="type-kicker inline-flex items-center gap-1 border border-[var(--rule-border)] bg-[var(--bg-surface)] px-2 py-1 text-[10px] text-[var(--ink-primary)] cursor-pointer"
+                      >
+                        {isMuted ? (
+                          <VolumeX className="h-3 w-3 text-[var(--accent)]" />
+                        ) : (
+                          <Volume2 className="h-3 w-3" />
+                        )}
+                      </button>
 
-                    <button
-                      type="button"
-                      onClick={handleRestartFromStartSeconds}
-                      title="Ab Start-Zeitpunkt neu abspielen"
-                      className="type-kicker inline-flex items-center gap-1 border border-[var(--rule-border)] bg-[var(--bg-surface)] px-2 py-1 text-[10px] text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] cursor-pointer"
-                    >
-                      <RefreshCw className="h-3 w-3" />
-                      AB {formatSecondsToMmSs(activeCard.startSeconds)}
-                    </button>
+                      <button
+                        type="button"
+                        onClick={handleRestartFromStartSeconds}
+                        title="Ab Start-Zeitpunkt neu abspielen"
+                        className="type-kicker inline-flex items-center gap-1 border border-[var(--rule-border)] bg-[var(--bg-surface)] px-2 py-1 text-[10px] text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] cursor-pointer"
+                      >
+                        <RefreshCw className="h-3 w-3" />
+                        AB {formatSecondsToMmSs(activeCard.startSeconds)}
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setShowVideoEmbed((v) => !v)}
+                        className={`type-kicker inline-flex items-center gap-1 border px-2 py-1 text-[10px] cursor-pointer ${
+                          showVideoEmbed
+                            ? "border-[var(--ink-primary)] bg-[var(--ink-primary)] text-[var(--bg-surface)]"
+                            : "border-[var(--rule-border)] bg-[var(--bg-surface)] text-[var(--ink-primary)]"
+                        }`}
+                      >
+                        {showVideoEmbed ? (
+                          <>
+                            <ImageIcon className="h-3 w-3" /> COVER ZEIGEN
+                          </>
+                        ) : (
+                          <>
+                            <Film className="h-3 w-3" />{" "}
+                            {activeCard.platform === "SPOTIFY"
+                              ? "PLAYER ZEIGEN"
+                              : "VIDEO ZEIGEN"}
+                          </>
+                        )}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleShareSingleProposal(activeCard, "swipe")
+                        }
+                        title="Direktlink zu diesem Liedvorschlag teilen"
+                        className={`type-kicker inline-flex items-center gap-1 border px-2 py-1 text-[10px] cursor-pointer ${
+                          copiedShareKey === activeCard.id
+                            ? "border-[var(--ink-primary)] bg-[var(--ink-primary)] font-bold text-[var(--bg-surface)]"
+                            : "border-[var(--rule-border)] bg-[var(--bg-surface)] text-[var(--ink-primary)] hover:border-[var(--ink-primary)]"
+                        }`}
+                      >
+                        {copiedShareKey === activeCard.id ? (
+                          <>
+                            <Check className="h-3 w-3" /> KOPIERT!
+                          </>
+                        ) : (
+                          <>
+                            <Share2 className="h-3 w-3" /> TEILEN
+                          </>
+                        )}
+                      </button>
+
+                      <a
+                        href={activeCard.sourceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Original-Link öffnen"
+                        className="type-kicker inline-flex items-center gap-1 border border-[var(--rule-border)] bg-[var(--bg-surface)] px-2 py-1 text-[10px] text-[var(--ink-secondary)] hover:text-[var(--ink-primary)]"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setShowVideoEmbed((v) => !v)}
-                      className={`type-kicker inline-flex items-center gap-1 border px-2 py-1 text-[10px] cursor-pointer ${
-                        showVideoEmbed
-                          ? "border-[var(--ink-primary)] bg-[var(--ink-primary)] text-[var(--bg-surface)]"
-                          : "border-[var(--rule-border)] bg-[var(--bg-surface)] text-[var(--ink-primary)]"
-                      }`}
-                    >
-                      {showVideoEmbed ? (
-                        <>
-                          <ImageIcon className="h-3 w-3" /> COVER ZEIGEN
-                        </>
-                      ) : (
-                        <>
-                          <Film className="h-3 w-3" />{" "}
-                          {activeCard.platform === "SPOTIFY"
-                            ? "PLAYER ZEIGEN"
-                            : "VIDEO ZEIGEN"}
-                        </>
-                      )}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleShareSingleProposal(activeCard, "swipe")
-                      }
-                      title="Direktlink zu diesem Liedvorschlag teilen"
-                      className={`type-kicker inline-flex items-center gap-1 border px-2 py-1 text-[10px] cursor-pointer ${
-                        copiedShareKey === activeCard.id
-                          ? "border-[var(--ink-primary)] bg-[var(--ink-primary)] font-bold text-[var(--bg-surface)]"
-                          : "border-[var(--rule-border)] bg-[var(--bg-surface)] text-[var(--ink-primary)] hover:border-[var(--ink-primary)]"
-                      }`}
-                    >
-                      {copiedShareKey === activeCard.id ? (
-                        <>
-                          <Check className="h-3 w-3" /> KOPIERT!
-                        </>
-                      ) : (
-                        <>
-                          <Share2 className="h-3 w-3" /> TEILEN
-                        </>
-                      )}
-                    </button>
-
-                    <a
-                      href={activeCard.sourceUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      title="Original-Link öffnen"
-                      className="type-kicker inline-flex items-center gap-1 border border-[var(--rule-border)] bg-[var(--bg-surface)] px-2 py-1 text-[10px] text-[var(--ink-secondary)] hover:text-[var(--ink-primary)]"
-                    >
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
+                  {/* 4 Quick-Jump Snippet Thumb Buttons (0:00 | 0:30 | 1:00 | 1:30) */}
+                  <div className="grid grid-cols-4 gap-1 pt-0.5">
+                    {(
+                      [
+                        { sec: 0, label: "⏮ 0:00" },
+                        { sec: 30, label: "🎺 0:30" },
+                        { sec: 60, label: "🎷 1:00" },
+                        { sec: 90, label: "🔥 1:30" },
+                      ] as const
+                    ).map((jmp) => {
+                      const currentStart =
+                        activeStartOffset !== null
+                          ? activeStartOffset
+                          : activeCard.startSeconds || 0;
+                      const isCurrent = currentStart === jmp.sec;
+                      return (
+                        <button
+                          key={jmp.sec}
+                          type="button"
+                          onClick={() => handleJumpToSeconds(jmp.sec)}
+                          title={`Direkt zu ${jmp.label} springen`}
+                          className={`font-mono-tabular border py-1 text-center text-[10px] font-bold cursor-pointer ${
+                            isCurrent
+                              ? "border-[var(--ink-primary)] bg-[var(--ink-primary)] text-[var(--bg-surface)]"
+                              : "border-[var(--rule-border)] bg-[var(--bg-surface)] text-[var(--ink-primary)] hover:border-[var(--ink-primary)]"
+                          }`}
+                        >
+                          {jmp.label}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -2439,11 +2500,18 @@ export default function LiedvorschlaegeTab({
                               </div>
                             </div>
                           </div>
-                          {tr.alreadyExists && (
-                            <span className="type-kicker shrink-0 border border-[var(--rule-border)] bg-[var(--bg-surface)] px-1.5 py-0.5 text-[9px] text-[var(--ink-muted)]">
-                              BEREITS DRIN
-                            </span>
-                          )}
+                          <div className="flex shrink-0 flex-wrap items-center gap-1">
+                            {tr.alreadyInRepertoire && (
+                              <span className="type-kicker border border-[var(--accent)] bg-[var(--bg-surface)] px-1.5 py-0.5 text-[9px] font-bold text-[var(--accent)]">
+                                ⚠️ BEREITS IM REPERTOIRE (TAB 01)
+                              </span>
+                            )}
+                            {tr.alreadyExists && (
+                              <span className="type-kicker border border-[var(--rule-border)] bg-[var(--bg-surface)] px-1.5 py-0.5 text-[9px] text-[var(--ink-muted)]">
+                                BEREITS VORGESCHLAGEN
+                              </span>
+                            )}
+                          </div>
                         </label>
                       );
                     })}
@@ -2479,18 +2547,39 @@ export default function LiedvorschlaegeTab({
               ) : (
                 /* MODE A: SINGLE TRACK DETAILS & PREVIEW */
                 <div className="space-y-3 border-t border-[var(--rule-border)] pt-3">
-                  {draftThumbnailUrl && (
+                  {(draftThumbnailUrl ||
+                    draftTitle ||
+                    draftAlreadyInRepertoire ||
+                    draftAlreadyExists) && (
                     <div className="flex items-center gap-3 border border-[var(--rule-border)] bg-[var(--bg-paper)] p-2.5">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={draftThumbnailUrl}
-                        alt={draftTitle}
-                        className="h-16 w-24 shrink-0 border border-[var(--rule-heavy)] object-cover"
-                      />
+                      {draftThumbnailUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={draftThumbnailUrl}
+                          alt={draftTitle}
+                          className="h-16 w-24 shrink-0 border border-[var(--rule-heavy)] object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-16 w-24 shrink-0 items-center justify-center border border-[var(--rule-heavy)] bg-[var(--ink-primary)] text-[var(--bg-surface)]">
+                          <Music className="h-6 w-6" />
+                        </div>
+                      )}
                       <div className="min-w-0 flex-1">
-                        <span className="type-kicker text-[10px] text-[var(--accent)]">
-                          VORSCHAU GELADEN ({draftPlatform})
-                        </span>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="type-kicker text-[10px] text-[var(--accent)]">
+                            VORSCHAU GELADEN ({draftPlatform})
+                          </span>
+                          {draftAlreadyInRepertoire && (
+                            <span className="type-kicker border border-[var(--accent)] bg-[var(--bg-surface)] px-1.5 py-0.5 text-[9px] font-bold text-[var(--accent)]">
+                              ⚠️ BEREITS IM REPERTOIRE (TAB 01)
+                            </span>
+                          )}
+                          {draftAlreadyExists && (
+                            <span className="type-kicker border border-[var(--rule-border)] bg-[var(--bg-surface)] px-1.5 py-0.5 text-[9px] text-[var(--ink-muted)]">
+                              BEREITS VORGESCHLAGEN
+                            </span>
+                          )}
+                        </div>
                         <div className="truncate font-display text-base font-semibold">
                           {draftTitle || "Unbenannt"}
                         </div>

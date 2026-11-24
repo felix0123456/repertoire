@@ -4,15 +4,22 @@
   /* Color Token System — Conservatory Score Ledger (Zero Gradients) */
   --bg-paper: #F6F3EC;
   --bg-surface: #FDFBF7;
+  --bg-card: #FDFBF7;
   --bg-recessed: #EBE5D8;
+  --bg-subtle: #EBE5D8;
   --ink-primary: #141311;
   --ink-secondary: #57534C;
   --ink-muted: #857F75;
   --rule-border: #D6CFC1;
+  --border-subtle: #D6CFC1;
   --rule-heavy: #141311;
+  --border-ink: #141311;
 
-  /* Single-Role Accent: Conductor's Vermilion Pencil */
+  /* Single-Role Accent: Conductor's Vermilion Pencil & Status Tokens */
   --accent: #C83E2B;
+  --accent-rust: #C83E2B;
+  --accent-amber: #B45309;
+  --accent-forest: #15803D;
   --accent-ink: #FDFBF7;
 
   /* Typography Tokens (Real Google Webfonts) */

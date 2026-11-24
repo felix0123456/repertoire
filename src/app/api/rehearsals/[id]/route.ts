@@ -63,8 +63,47 @@ export async function PATCH(
         if (normalized !== session.absentSoloists) filtersChanged = true;
         data.absentSoloists = normalized;
       }
+      if (
+        typeof body.absentInstruments === "string" ||
+        Array.isArray(body.absentInstruments)
+      ) {
+        const normalized = normalizeTags(body.absentInstruments);
+        if (normalized !== session.absentInstruments) filtersChanged = true;
+        data.absentInstruments = normalized;
+
+        if (session.attendanceJson && session.attendanceJson !== "[]") {
+          try {
+            const parsedAtt = JSON.parse(session.attendanceJson);
+            if (Array.isArray(parsedAtt) && parsedAtt.length > 0) {
+              parsedAtt[0] = {
+                ...parsedAtt[0],
+                manualRegisterOverride: true,
+              };
+              data.attendanceJson = JSON.stringify(parsedAtt);
+              filtersChanged = true;
+            }
+          } catch {
+            // ignore json parse error
+          }
+        }
+      }
       if (typeof body.isLocked === "boolean") {
         data.isLocked = body.isLocked;
+      }
+      if (typeof body.hasBreak === "boolean") {
+        data.hasBreak = body.hasBreak;
+      }
+      if (body.breakDurationMinutes !== undefined) {
+        data.breakDurationMinutes = Math.max(
+          5,
+          Math.min(60, Math.round(Number(body.breakDurationMinutes) || 15))
+        );
+      }
+      if (body.breakAfterPieceIndex !== undefined) {
+        data.breakAfterPieceIndex = Math.max(
+          1,
+          Math.min(30, Math.round(Number(body.breakAfterPieceIndex) || 3))
+        );
       }
 
       const updated = await prisma.rehearsalSession.update({
@@ -72,7 +111,6 @@ export async function PATCH(
         data,
       });
 
-      // If singer presence or soloist absence changed and session is not locked, auto-update pieces for this session
       if (filtersChanged && !updated.isLocked && updated.status === "PLANNED") {
         await recalculateSchedule({ forceSessionId: id });
       } else {
@@ -80,6 +118,89 @@ export async function PATCH(
       }
 
       return NextResponse.json({ session: updated });
+    }
+
+    if (action === "update-break") {
+      const data: Record<string, unknown> = {};
+      if (typeof body.hasBreak === "boolean") {
+        data.hasBreak = body.hasBreak;
+      }
+      if (body.breakDurationMinutes !== undefined) {
+        data.breakDurationMinutes = Math.max(
+          5,
+          Math.min(60, Math.round(Number(body.breakDurationMinutes) || 15))
+        );
+      }
+      if (body.breakAfterPieceIndex !== undefined) {
+        data.breakAfterPieceIndex = Math.max(
+          1,
+          Math.min(30, Math.round(Number(body.breakAfterPieceIndex) || 3))
+        );
+      }
+      const updated = await prisma.rehearsalSession.update({
+        where: { id },
+        data,
+      });
+      await savePersistentSnapshot();
+      return NextResponse.json({ session: updated });
+    }
+
+    if (action === "update-piece-duration") {
+      const { pieceId, estimatedMinutes } = body;
+      if (!pieceId) {
+        return NextResponse.json(
+          { error: "pieceId ist erforderlich." },
+          { status: 400 }
+        );
+      }
+      const mins = Math.max(0, Math.min(90, Math.round(Number(estimatedMinutes) || 0)));
+      await prisma.rehearsalSessionPiece.updateMany({
+        where: { sessionId: id, pieceId },
+        data: { estimatedMinutes: mins },
+      });
+      await savePersistentSnapshot();
+      return NextResponse.json({ success: true });
+    }
+
+    if (action === "update-piece-bpm") {
+      const { pieceId, sessionBpm, sessionBpmComment, updatePieceTargetBpm } =
+        body;
+      if (!pieceId) {
+        return NextResponse.json(
+          { error: "pieceId ist erforderlich." },
+          { status: 400 }
+        );
+      }
+      const bpmVal = Math.max(
+        0,
+        Math.min(400, Math.round(Number(sessionBpm) || 0))
+      );
+      const commentVal =
+        typeof sessionBpmComment === "string"
+          ? sessionBpmComment.trim()
+          : undefined;
+
+      const updateData: Record<string, unknown> = {
+        sessionBpm: bpmVal,
+      };
+      if (commentVal !== undefined) {
+        updateData.sessionBpmComment = commentVal;
+      }
+
+      await prisma.rehearsalSessionPiece.updateMany({
+        where: { sessionId: id, pieceId },
+        data: updateData,
+      });
+
+      if (updatePieceTargetBpm && bpmVal > 0) {
+        await prisma.piece.update({
+          where: { id: pieceId },
+          data: { bpm: bpmVal },
+        });
+      }
+
+      await savePersistentSnapshot();
+      return NextResponse.json({ success: true });
     }
 
     if (action === "toggle-lock") {
@@ -143,7 +264,6 @@ export async function PATCH(
         },
       });
 
-      // Lock session so manual edit is preserved
       await prisma.rehearsalSession.update({
         where: { id },
         data: { isLocked: true },
@@ -159,7 +279,6 @@ export async function PATCH(
         where: { sessionId: id, pieceId },
       });
 
-      // Re-normalize sortOrder 1..k
       const remaining = await prisma.rehearsalSessionPiece.findMany({
         where: { sessionId: id },
         orderBy: { sortOrder: "asc" },
@@ -202,10 +321,15 @@ export async function PATCH(
     }
 
     if (action === "pull-next") {
-      // Find highest-priority eligible piece not yet in this session
       const currentPieceIds = new Set(session.pieces.map((p) => p.pieceId));
       const allPieces = await prisma.piece.findMany({
-        include: { votes: true },
+        include: {
+          votes: {
+            include: {
+              user: { select: { id: true, name: true, instrument: true } },
+            },
+          },
+        },
       });
 
       const candidates = allPieces
@@ -215,7 +339,11 @@ export async function PATCH(
             isPieceEligibleForSession(
               p,
               session.presentSingers,
-              session.absentSoloists
+              session.absentSoloists,
+              {
+                absentInstruments: session.absentInstruments,
+                attendanceJson: session.attendanceJson,
+              }
             ).eligible
         )
         .map((p) => ({
@@ -228,7 +356,7 @@ export async function PATCH(
         return NextResponse.json(
           {
             error:
-              "Kein weiteres passendes Stück verfügbar (evtl. wegen Sänger-/Solisten-Filter oder alle Stücke sind bereits in der Probe).",
+              "Kein weiteres passendes Stück verfügbar (evtl. wegen Sänger-/Solisten-/Register-Filter oder alle Stücke sind bereits in der Probe).",
           },
           { status: 400 }
         );
@@ -249,7 +377,6 @@ export async function PATCH(
         },
       });
 
-      // Recalculate subsequent unlocked sessions so the pulled piece rotates properly
       await recalculateSchedule();
       await savePersistentSnapshot();
 
@@ -284,7 +411,6 @@ export async function PATCH(
         },
       });
 
-      // Mark all pieces in this session as practiced today
       const pieceIds = session.pieces.map((p) => p.pieceId);
       if (pieceIds.length > 0) {
         await prisma.piece.updateMany({
@@ -293,7 +419,6 @@ export async function PATCH(
         });
       }
 
-      // Update totalSessionsLeft to match remaining non-completed sessions
       const remainingCount = await prisma.rehearsalSession.count({
         where: { status: { not: "COMPLETED" } },
       });
@@ -308,7 +433,7 @@ export async function PATCH(
     }
 
     if (action === "log-piece") {
-      const { userId, pieceId, comment } = body;
+      const { userId, pieceId, comment, sessionBpm, sessionBpmComment } = body;
       if (!userId || !pieceId) {
         return NextResponse.json(
           { error: "Spieler und Stück sind erforderlich." },
@@ -338,7 +463,6 @@ export async function PATCH(
           ? Math.max(1, Math.min(5, Math.round(Number(body.likeScore))))
           : existingVote?.likeScore ?? 3;
 
-      // Update the player's current vote with the new values
       await prisma.pieceVote.upsert({
         where: {
           userId_pieceId: { userId, pieceId },
@@ -357,7 +481,23 @@ export async function PATCH(
         },
       });
 
-      // Check if this user already logged this piece in this session; if so, update it, else create
+      if (sessionBpm !== undefined || sessionBpmComment !== undefined) {
+        const bpmUpdate: Record<string, unknown> = {};
+        if (sessionBpm !== undefined) {
+          bpmUpdate.sessionBpm = Math.max(
+            0,
+            Math.min(400, Math.round(Number(sessionBpm) || 0))
+          );
+        }
+        if (typeof sessionBpmComment === "string") {
+          bpmUpdate.sessionBpmComment = sessionBpmComment.trim();
+        }
+        await prisma.rehearsalSessionPiece.updateMany({
+          where: { sessionId: id, pieceId },
+          data: bpmUpdate,
+        });
+      }
+
       const existingLog = await prisma.rehearsalLog.findFirst({
         where: {
           sessionId: id,
@@ -391,7 +531,6 @@ export async function PATCH(
         });
       }
 
-      // Also update lastPracticedAt on the piece when logged in a session
       await prisma.piece.update({
         where: { id: pieceId },
         data: { lastPracticedAt: new Date() },
@@ -420,7 +559,6 @@ export async function DELETE(
     const { id } = await params;
     await prisma.rehearsalSession.delete({ where: { id } });
 
-    // Re-number remaining sessions cleanly
     const remaining = await prisma.rehearsalSession.findMany({
       orderBy: [{ scheduledDate: "asc" }, { sessionNumber: "asc" }],
     });
@@ -449,4 +587,3 @@ export async function DELETE(
     );
   }
 }
-
